@@ -1,0 +1,67 @@
+cff-version: 1.2.0
+message: "Se você usar este software, por favor cite-o conforme os metadados abaixo."
+type: software
+title: "EduRAG — Assistente para Professores da Educação Básica"
+abstract: >
+  Sistema agêntico baseado em RAG (Retrieval-Augmented Generation) com LangGraph
+  para apoiar professores da Educação Básica brasileira. Indexa BNCC, PCN e PNLD
+  (documentos públicos do MEC), responde com citações, valida fidelidade via Self-RAG,
+  gera planos de aula e verifica alinhamento com habilidades da BNCC.
+  Usa Ollama (LLM local OSS) e BAAI/bge-m3 (HuggingFace, sem custo de API).
+version: 0.1.0
+date-released: "2026-03-10"
+license: MIT
+url: "https://github.com/seu-usuario/edurag"
+repository-code: "https://github.com/seu-usuario/edurag"
+
+authors:
+  - name: "EduRAG Contributors"
+
+keywords:
+  - RAG
+  - LangChain
+  - LangGraph
+  - LLM
+  - Educação Básica
+  - BNCC
+  - PCN
+  - PNLD
+  - plano de aula
+  - Self-RAG
+  - MCP
+  - Ollama
+  - HuggingFace
+  - RAGAS
+  - educação
+
+references:
+  - type: report
+    title: "Base Nacional Comum Curricular (BNCC)"
+    authors:
+      - name: "Ministério da Educação (MEC)"
+    year: 2018
+    url: "https://basenacionalcomum.mec.gov.br/"
+
+  - type: report
+    title: "Parâmetros Curriculares Nacionais (PCN)"
+    authors:
+      - name: "Ministério da Educação (MEC)"
+    year: 1997
+    url: "https://portal.mec.gov.br/seb/arquivos/pdf/livro01.pdf"
+
+  - type: software
+    title: "LangGraph"
+    url: "https://github.com/langchain-ai/langgraph"
+
+  - type: software
+    title: "RAGAS"
+    url: "https://github.com/explodinggradients/ragas"
+
+  - type: software
+    title: "Ollama"
+    url: "https://ollama.com"
+
+  - type: dataset
+    title: "BAAI/bge-m3"
+    url: "https://huggingface.co/BAAI/bge-m3"
+    notes: "Multilingual embedding model, HuggingFace"
