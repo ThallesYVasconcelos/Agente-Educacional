@@ -1,0 +1,92 @@
+[
+  {
+    "id": "Q01",
+    "question": "Quais são os objetivos de aprendizagem de Língua Portuguesa para o 1º ano segundo a BNCC?",
+    "ground_truth": "No 1º ano, a BNCC para Língua Portuguesa foca na alfabetização: o aluno deve reconhecer o sistema de escrita alfabética, identificar letras e suas relações com sons, ler palavras com fluência crescente e produzir escrita com apoio. Os campos de atuação incluem a vida cotidiana e práticas de letramento.",
+    "source": "BNCC, p. 90-95"
+  },
+  {
+    "id": "Q02",
+    "question": "O que a BNCC define como objetivos de Matemática para o 2º ano?",
+    "ground_truth": "No 2º ano, a BNCC de Matemática prevê habilidades como: contar, comparar e ordenar números até 1000; resolver problemas com adição e subtração; identificar formas geométricas planas; medir comprimento com unidades não padronizadas; e coletar dados simples para organizar em tabelas.",
+    "source": "BNCC, p. 280-285"
+  },
+  {
+    "id": "Q03",
+    "question": "Como a BNCC orienta o ensino de Ciências no 3º ano do Ensino Fundamental?",
+    "ground_truth": "No 3º ano, as habilidades de Ciências incluem: identificar características dos seres vivos (EF03CI01), comparar características de animais (EF03CI02), observar e relatar transformações nos materiais (EF03CI03) e discutir a importância da água para os seres vivos (EF03CI04). O foco está nas unidades Vida e Evolução e Matéria e Energia.",
+    "source": "BNCC, p. 330-333"
+  },
+  {
+    "id": "Q04",
+    "question": "Quais habilidades de leitura o 2º ano deve desenvolver segundo a BNCC?",
+    "ground_truth": "No 2º ano, a BNCC prevê habilidades como: ler textos com autonomia e fluência, identificar a finalidade de diferentes gêneros textuais, localizar informações explícitas em textos curtos, e relacionar texto e imagem em livros ilustrados. A habilidade EF02LP01 trata da leitura com compreensão de textos do cotidiano.",
+    "source": "BNCC, p. 92-96"
+  },
+  {
+    "id": "Q05",
+    "question": "O que a BNCC estabelece para o processo de alfabetização nos dois primeiros anos?",
+    "ground_truth": "A BNCC estabelece que a alfabetização deve ser prioridade nos dois primeiros anos do Ensino Fundamental. O processo envolve o desenvolvimento da consciência fonológica, o conhecimento do sistema de escrita alfabética ortográfica e práticas de letramento. O objetivo é que os alunos estejam alfabetizados ao final do 2º ano.",
+    "source": "BNCC, p. 57-59"
+  },
+  {
+    "id": "Q06",
+    "question": "Quais são as habilidades de escrita para o 3º ano segundo a BNCC?",
+    "ground_truth": "No 3º ano, as habilidades de escrita incluem: produzir textos com autonomia ortográfica básica, planejar e revisar textos com apoio do professor, escrever textos de diferentes gêneros (narrativo, instrucional, informativo) e usar pontuação básica. A habilidade EF03LP15 trata da produção de textos com estrutura narrativa.",
+    "source": "BNCC, p. 99-104"
+  },
+  {
+    "id": "Q07",
+    "question": "Como os PCN orientam o ensino de Matemática nos anos iniciais?",
+    "ground_truth": "Os PCN de Matemática para os anos iniciais propõem o ensino a partir de situações-problema do cotidiano, organizando o conteúdo em quatro blocos: Números e Operações, Espaço e Forma, Grandezas e Medidas, e Tratamento da Informação. Enfatizam a compreensão dos conceitos em vez da memorização de algoritmos.",
+    "source": "PCN Matemática, 1997, p. 35-45"
+  },
+  {
+    "id": "Q08",
+    "question": "O que a BNCC prevê para o ensino de História no 1º e 2º ano?",
+    "ground_truth": "Nos 1º e 2º anos, a BNCC de História foca na unidade temática 'Mundo pessoal: meu lugar no mundo'. As habilidades incluem: identificar aspectos do próprio cotidiano (EF01HI01), reconhecer mudanças e permanências na vida familiar (EF01HI02), e comparar o passado e presente na vida da criança e de sua comunidade (EF02HI01).",
+    "source": "BNCC, p. 400-405"
+  },
+  {
+    "id": "Q09",
+    "question": "Quais competências específicas de Língua Portuguesa a BNCC define para os anos iniciais?",
+    "ground_truth": "A BNCC define 10 competências específicas de Língua Portuguesa que devem ser desenvolvidas ao longo de toda a Educação Básica, com progressão nos anos iniciais: compreender a língua como fenômeno cultural, usar diferentes linguagens, valorizar a diversidade linguística, produzir e fruir textos em diferentes mídias e suportes.",
+    "source": "BNCC, p. 85-87"
+  },
+  {
+    "id": "Q10",
+    "question": "Como a BNCC organiza o componente Arte nos anos iniciais?",
+    "ground_truth": "O componente Arte nos anos iniciais integra quatro linguagens: Artes Visuais, Dança, Música e Teatro. As habilidades são organizadas nos eixos: Criação, Crítica, Estesia, Expressão, Fruição e Reflexão. Do 1º ao 5º ano (1ª fase), as habilidades possuem o prefixo EF15AR e são trabalhadas de forma integrada.",
+    "source": "BNCC, p. 195-205"
+  },
+  {
+    "id": "Q11",
+    "question": "O que a BNCC prevê para Educação Física nos anos iniciais?",
+    "ground_truth": "A Educação Física nos anos iniciais (1º ao 5º ano) organiza-se em unidades temáticas: Brincadeiras e jogos, Esportes, Ginástica, Dança, Lutas e Práticas corporais de aventura. As habilidades incluem vivenciar, experimentar e refletir sobre as práticas corporais, com foco em brincadeiras populares e jogos cooperativos nos anos iniciais.",
+    "source": "BNCC, p. 211-225"
+  },
+  {
+    "id": "Q12",
+    "question": "O que são os campos de atuação em Língua Portuguesa na BNCC?",
+    "ground_truth": "A BNCC organiza Língua Portuguesa em cinco campos de atuação: Campo da vida cotidiana, Campo artístico-literário, Campo das práticas de estudo e pesquisa, Campo jornalístico-midiático e Campo de atuação na vida pública. Nos anos iniciais, o foco está principalmente no campo da vida cotidiana e no artístico-literário.",
+    "source": "BNCC, p. 83-85"
+  },
+  {
+    "id": "Q13",
+    "question": "Quais habilidades de números e operações a BNCC prevê para o 4º ano?",
+    "ground_truth": "No 4º ano, as habilidades de Números na BNCC incluem: ler, escrever e comparar números naturais até a ordem dos milhares (EF04MA01), compor e decompor números (EF04MA02), resolver e elaborar problemas com as quatro operações (EF04MA08), e compreender frações como parte de um todo (EF04MA09).",
+    "source": "BNCC, p. 290-295"
+  },
+  {
+    "id": "Q14",
+    "question": "Como trabalhar consciência fonológica no 1º ano segundo os PCN e a BNCC?",
+    "ground_truth": "Tanto os PCN quanto a BNCC recomendam atividades que desenvolvam a consciência fonológica: rimas, aliterações, segmentação silábica, identificação de fonemas e associação grafema-fonema. Os PCN de Língua Portuguesa propõem jogos com sons da língua e a BNCC prevê a habilidade EF01LP02 de segmentar oralmente palavras em sílabas.",
+    "source": "PCN LP, 1997, p. 58; BNCC, p. 91"
+  },
+  {
+    "id": "Q15",
+    "question": "O que a BNCC estabelece para o ensino de Geografia no 3º e 4º ano?",
+    "ground_truth": "No 3º ano, as habilidades de Geografia incluem identificar e comparar as condições ambientais de diferentes paisagens e reconhecer as características do lugar de vivência (EF03GE01). No 4º ano, ampliam-se para o estudo do território brasileiro, municípios e regiões, com habilidades como EF04GE01: descrever as características dos lugares de vivência e da região.",
+    "source": "BNCC, p. 375-385"
+  }
+]
