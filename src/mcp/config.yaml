@@ -1,0 +1,71 @@
+# EduRAG MCP Server — Configuração de Segurança
+# ============================================================
+# ALLOWLIST: apenas estas tools podem ser chamadas
+# Qualquer tool fora desta lista é bloqueada com HTTP 403.
+# ============================================================
+
+allowed_tools:
+  - search_docs
+  - generate_lesson_plan
+  - check_bncc_skills
+  - list_sources
+  - get_info
+
+# ============================================================
+# LIMITES DE INPUT (proteção contra abuso)
+# ============================================================
+input_limits:
+  max_query_chars: 2000
+  max_description_chars: 3000
+  max_componente_chars: 100
+  max_habilidade_chars: 500
+  max_top_k: 20
+  max_duracao_aulas: 5
+
+# ============================================================
+# RATE LIMITING (por IP, por minuto)
+# ============================================================
+rate_limits:
+  search_docs: 60
+  generate_lesson_plan: 10
+  check_bncc_skills: 20
+  list_sources: 30
+  get_info: 60
+
+# ============================================================
+# AUDIT LOG — campos registrados em cada requisição
+# ============================================================
+audit_log_fields:
+  - timestamp
+  - tool_name
+  - client_host
+  - query_hash       # MD5 dos primeiros 8 chars (sem PII)
+  - latency_ms
+  - status_code
+
+# ============================================================
+# RESTRIÇÕES DE FILESYSTEM
+# O servidor MCP só pode ler arquivos em:
+# ============================================================
+filesystem_allowlist:
+  read_only:
+    - data/raw/educacao/
+    - data/processed/chroma/educacao/
+  forbidden:
+    - src/
+    - .env
+    - "*.key"
+    - "*.pem"
+
+# ============================================================
+# O QUE O AGENTE NÃO PODE FAZER
+# (documentado para transparência e auditoria)
+# ============================================================
+restrictions:
+  - Não executa código arbitrário (sem tool exec_code ou similar)
+  - Não acessa internet diretamente (apenas corpus local)
+  - Não armazena inputs do usuário além do audit log anonimizado
+  - Não fornece aconselhamento médico, jurídico ou psicológico
+  - Não acessa arquivos fora do filesystem_allowlist
+  - Não retorna dados pessoais de estudantes ou professores
+  - Não aceita uploads de arquivos via API (ingestão offline apenas)
