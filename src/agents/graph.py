@@ -136,7 +136,7 @@ def node_supervisor(state: AgentState) -> AgentState:
 def node_retriever(state: AgentState) -> AgentState:
     """Busca documentos relevantes no ChromaDB."""
     retriever = get_retriever(top_k=6)
-    docs = retriever.get_relevant_documents(state["question"])
+    docs = retriever.invoke(state["question"])
     attempts = state.get("retrieval_attempts", 0) + 1
     sources = [
         {"content": d.page_content[:400], "metadata": d.metadata}
