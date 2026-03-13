@@ -50,7 +50,7 @@ for msg in st.session_state.messages:
 # Input do usuário
 # ---------------------------------------------------------------------------
 
-    if prompt := st.chat_input("Pergunte sobre BNCC, PCN, alfabetização ou habilidades do 1º ao 4º ano..."):
+if prompt := st.chat_input("Pergunte sobre BNCC, PCN, alfabetização ou habilidades do 1º ao 4º ano..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -107,9 +107,7 @@ with st.sidebar:
         "Como trabalhar contagem e números com o 1º ano?",
     ]
     for ex in examples:
-        if st.button(ex, use_container_width=True):
-            st.session_state.messages.append({"role": "user", "content": ex})
-            st.rerun()
+        st.markdown(f"- *{ex}*")
 
     st.divider()
     if st.button("Limpar conversa", use_container_width=True):
