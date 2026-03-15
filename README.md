@@ -1,7 +1,7 @@
 # EduRAG — Assistente para Professores dos Anos Iniciais (1º ao 4º ano)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11--3.13-blue.svg)](https://www.python.org/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2+-green.svg)](https://langchain-ai.github.io/langgraph/)
 
 Sistema RAG agêntico open source para apoiar professores da Educação Básica brasileira.
@@ -65,7 +65,7 @@ LangGraph — Supervisor Pattern
 | VectorStore | ChromaDB (local) |
 | Interface | Streamlit |
 | MCP Server | FastAPI |
-| Avaliação | RAGAS 0.2+ |
+| Avaliação | Giskard 2.0+ |
 | Testes | pytest |
 
 ---
@@ -74,17 +74,20 @@ LangGraph — Supervisor Pattern
 
 ### Pré-requisitos
 
-- Python 3.11+
+- Python **3.11 a 3.13** (recomendado 3.11 ou 3.12)
 - [Ollama](https://ollama.com) instalado e rodando
 - Git
+
+> **Atenção:** Python 3.14 não é recomendado. O LangChain utiliza internamente o Pydantic v1, que não é compatível com Python 3.14+.
 
 ### 1. Clonar e instalar dependências
 
 ```bash
-git clone https://github.com/seu-usuario/edurag.git
-cd edurag
+git clone https://github.com/ThallesYVasconcelos/Agente-Educacional.git
+cd Agente-Educacional
 pip install -r requirements.txt
 ```
+
 
 ### 2. Configurar variáveis de ambiente
 
@@ -145,7 +148,7 @@ python ingest/pipeline.py
 
 ```bash
 # Terminal 1 — Interface Streamlit
-streamlit run app/main.py
+python -m streamlit run app/main.py
 
 # Terminal 2 — MCP Server (opcional)
 python src/mcp/server.py
@@ -214,14 +217,14 @@ Criamos um servidor MCP próprio (`mcp-docstore`) em vez de usar um de terceiros
 
 ## Avaliação
 
-### RAG (RAGAS)
+### RAG (Giskard)
 
 ```bash
-python eval/ragas_eval.py --max-questions 15
+python eval/giskard_eval.py --max-questions 15
 ```
 
-Métricas: `context_precision`, `context_recall`, `faithfulness`, `answer_relevancy` + latência.
-15 perguntas rotuladas sobre BNCC, PCN e PNLD em `eval/questions/educacao.json`.
+Giskard AI Quality Scan: detecta vulnerabilidades (ex.: Prompt Injection), gera suíte de testes e relatório.
+Perguntas rotuladas em `eval/questions/educacao.json`.
 
 ### Automações
 
@@ -274,13 +277,12 @@ edurag/
 │   ├── chunkers.py             # Chunking otimizado para BNCC
 │   └── pipeline.py             # CLI de ingestão
 ├── eval/
-│   ├── ragas_eval.py           # Avaliação RAGAS
+│   ├── giskard_eval.py         # Avaliação RAG (Giskard)
 │   ├── automation_eval.py      # Avaliação das automações
 │   └── questions/
 │       └── educacao.json       # 15 perguntas rotuladas
 ├── tests/                      # pytest
 ├── docs/
-│   └── slides_outline.md       # Roteiro dos slides
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt

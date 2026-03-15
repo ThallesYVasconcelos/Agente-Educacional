@@ -31,7 +31,7 @@ keywords:
   - MCP
   - Ollama
   - HuggingFace
-  - RAGAS
+  - Giskard
   - educação
 
 references:
@@ -54,8 +54,8 @@ references:
     url: "https://github.com/langchain-ai/langgraph"
 
   - type: software
-    title: "RAGAS"
-    url: "https://github.com/explodinggradients/ragas"
+    title: "Giskard"
+    url: "https://github.com/Giskard-AI/giskard"
 
   - type: software
     title: "Ollama"

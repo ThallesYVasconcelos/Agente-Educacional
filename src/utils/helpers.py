@@ -32,10 +32,6 @@ class Settings(BaseSettings):
     # Self-check
     self_check_threshold: float = 0.7
 
-    # Avaliação
-    ragas_eval_llm: str = "gpt-4o-mini"
-    ragas_max_questions: int = 20
-
     # Logging
     log_level: str = "INFO"
     log_format: str = "json"

@@ -18,8 +18,8 @@ case "$1" in
     exec python ingest/pipeline.py "$@"
     ;;
   eval)
-    echo "Executando avaliação RAGAS..."
-    exec python eval/ragas_eval.py "$@"
+    echo "Executando avaliação Giskard..."
+    exec python eval/giskard_eval.py "$@"
     ;;
   *)
     exec "$@"
