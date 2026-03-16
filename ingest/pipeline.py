@@ -2,7 +2,7 @@
 Pipeline de ingestão do corpus de Educação Básica.
 
 Uso:
-  python ingest/pipeline.py
+  python -m ingest.pipeline
 
 Adicione PDFs/TXTs da BNCC, PCN e PNLD em data/raw/educacao/ antes de rodar.
 
@@ -53,6 +53,13 @@ def main(
     typer.echo("\nCarregando documentos ...")
     docs = load_corpus()
     typer.echo(f"  {len(docs)} páginas/documentos carregados")
+
+    if not docs:
+        typer.echo(
+            "\n[ERRO] Nenhum PDF ou TXT encontrado em data/raw/educacao/\n"
+            "Adicione arquivos .pdf ou .txt antes de continuar.\n"
+        )
+        raise typer.Exit(code=1)
 
     typer.echo("Criando chunks ...")
     chunks = chunk_documents(docs)

@@ -15,7 +15,7 @@ case "$1" in
     ;;
   ingest)
     echo "Executando pipeline de ingestão..."
-    exec python ingest/pipeline.py "$@"
+    exec python -m ingest.pipeline "$@"
     ;;
   eval)
     echo "Executando avaliação Giskard..."

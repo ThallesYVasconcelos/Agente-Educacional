@@ -141,7 +141,7 @@ Invoke-WebRequest -Uri "https://portal.mec.gov.br/seb/arquivos/pdf/ciencias.pdf"
 ### 5. Ingerir o corpus
 
 ```bash
-python ingest/pipeline.py
+python -m ingest.pipeline
 ```
 
 ### 6. Iniciar a aplicação

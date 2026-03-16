@@ -18,6 +18,7 @@ Nós:
 from __future__ import annotations
 
 import json
+import re
 from typing import Annotated, List, TypedDict
 
 from langchain_core.documents import Document
@@ -135,7 +136,7 @@ def node_supervisor(state: AgentState) -> AgentState:
 
 def node_retriever(state: AgentState) -> AgentState:
     """Busca documentos relevantes no ChromaDB."""
-    retriever = get_retriever(top_k=6)
+    retriever = get_retriever(top_k=10)
     docs = retriever.invoke(state["question"])
     attempts = state.get("retrieval_attempts", 0) + 1
     sources = [
@@ -181,11 +182,17 @@ def node_self_check(state: AgentState) -> AgentState:
     llm = get_llm(temperature=0)
     chain = SELF_CHECK_PROMPT | llm
     result = chain.invoke({"context": context_text, "answer": state["answer"]})
+    score = 0.5
     try:
-        parsed = json.loads(result.content)
+        content = getattr(result, "content", "") or str(result)
+        parsed = json.loads(content)
         score = float(parsed.get("score", 0.5))
     except (json.JSONDecodeError, ValueError, AttributeError):
-        score = 0.5
+        # Fallback: extrair score de texto quando LLM não retorna JSON puro
+        content = getattr(result, "content", "") or str(result)
+        match = re.search(r'"score"\s*:\s*([0-9.]+)', content)
+        if match:
+            score = float(match.group(1))
 
     logger.info("self_check", score=score, attempts=state.get("retrieval_attempts", 1))
     return {**state, "self_check_score": score}
