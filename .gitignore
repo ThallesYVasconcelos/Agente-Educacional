@@ -16,14 +16,22 @@ dist/
 .env
 *.env.local
 
-# Data (não versionar PDFs grandes nem vetores gerados)
+# Streamlit secrets (nunca commitar — contém chaves de API)
+.streamlit/secrets.toml
+
+# Data — PDFs não versionados (baixar manualmente, ver README)
 data/raw/*
-data/processed/*
 !data/.gitkeep
 !data/raw/.gitkeep
 !data/raw/educacao/
 !data/raw/educacao/.gitkeep
+
+# Índice ChromaDB — VERSIONADO (gerado por python -m ingest.pipeline)
+# Todos os arquivos individuais < 100 MB → compatível com GitHub sem LFS
+!data/processed/
 !data/processed/.gitkeep
+!data/processed/chroma/
+!data/processed/chroma/**
 
 # ChromaDB
 chroma_db/

@@ -9,18 +9,22 @@ langchain-community>=0.3.0
 langchain-chroma>=0.1.4
 langgraph>=0.2.0
 
-# --- LLM: Ollama (preferência local/OSS) ---
+# --- LLM: Ollama (desenvolvimento local) ---
 langchain-ollama>=0.2.0
+
+# --- LLM: Replicate (deploy na nuvem) ---
+replicate>=0.34.0
 
 # --- LLM: OpenAI (fallback opcional) ---
 langchain-openai>=0.2.0
 openai>=1.40.0
 
-# --- Embeddings: HuggingFace OSS (bge-m3) ---
+# --- Embeddings: HuggingFace OSS (bge-m3 / bge-small) ---
 langchain-huggingface>=0.1.0
 sentence-transformers>=3.0.0
 
 # --- VectorStore ---
+# chromadb-client: versão sem servidor embutido (menor, para Streamlit Cloud)
 chromadb>=0.5.0
 
 # --- Ingestão de Documentos ---
