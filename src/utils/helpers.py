@@ -1,6 +1,7 @@
 """Utilitários gerais e carregamento de configurações."""
 
 from functools import lru_cache
+from typing import Any, List, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -64,32 +65,93 @@ def get_settings() -> Settings:
     return Settings()
 
 
+# ---------------------------------------------------------------------------
+# ChatReplicate — wrapper ChatModel sobre o cliente nativo do Replicate.
+# O LangChain não possui ChatReplicate nativo; o Replicate LLM legado retorna
+# string (sem .content), quebrando grafos LangGraph/LCEL.
+# Este wrapper converte mensagens LangChain → formato Replicate e devolve
+# AIMessage, tornando-o compatível com qualquer chain ou grafo.
+# ---------------------------------------------------------------------------
+
+def _build_chat_replicate(model: str, api_token: str, temperature: float):
+    """Constrói um ChatBaseLM mínimo para o Replicate."""
+    from langchain_core.language_models.chat_models import BaseChatModel
+    from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+    from langchain_core.outputs import ChatGeneration, ChatResult
+    import replicate as replicate_client
+    import os
+
+    os.environ["REPLICATE_API_TOKEN"] = api_token
+
+    class _ChatReplicate(BaseChatModel):
+        model_name: str = model
+        temperature: float = temperature
+
+        @property
+        def _llm_type(self) -> str:
+            return "replicate-chat"
+
+        def _generate(
+            self,
+            messages: List[BaseMessage],
+            stop: Optional[List[str]] = None,
+            **kwargs: Any,
+        ) -> ChatResult:
+            import json as _json
+
+            # Separa system prompt das demais mensagens
+            system_prompt = ""
+            replicate_messages = []
+            for m in messages:
+                if isinstance(m, SystemMessage):
+                    system_prompt = m.content
+                elif isinstance(m, HumanMessage):
+                    replicate_messages.append({"role": "user", "content": m.content})
+                elif isinstance(m, AIMessage):
+                    replicate_messages.append({"role": "assistant", "content": m.content})
+                else:
+                    replicate_messages.append({"role": "user", "content": str(m.content)})
+
+            # openai/gpt-4o-mini aceita "messages" como string JSON
+            input_payload: dict = {
+                "messages": _json.dumps(replicate_messages),
+                "temperature": max(self.temperature, 0.01),
+                "max_completion_tokens": 2048,
+            }
+            if system_prompt:
+                input_payload["system_prompt"] = system_prompt
+
+            output = replicate_client.run(self.model_name, input=input_payload)
+
+            # Replicate retorna iterator de strings
+            if hasattr(output, "__iter__") and not isinstance(output, str):
+                text = "".join(str(chunk) for chunk in output)
+            else:
+                text = str(output)
+
+            return ChatResult(generations=[ChatGeneration(message=AIMessage(content=text))])
+
+    return _ChatReplicate(model_name=model, temperature=temperature)
+
+
 def get_llm(temperature: float = 0):
     """
     Retorna o LLM configurado pelo LLM_PROVIDER:
-      - "replicate" → Replicate (Llama 3 na nuvem, usa REPLICATE_API_TOKEN)
-      - "openai"    → OpenAI ChatGPT (usa OPENAI_API_KEY)
-      - "ollama"    → Ollama local (padrão para desenvolvimento)
-    A variável legada USE_OLLAMA=false redireciona para "openai" se llm_provider
-    não foi explicitamente alterado.
+      - "replicate" → ChatReplicate wrapper (usa REPLICATE_API_TOKEN)
+      - "openai"    → ChatOpenAI (usa OPENAI_API_KEY)
+      - "ollama"    → ChatOllama local (padrão para desenvolvimento)
     """
     settings = get_settings()
 
     provider = settings.llm_provider
-    # Compatibilidade retroativa: USE_OLLAMA=false sem LLM_PROVIDER definido
     if provider == "ollama" and not settings.use_ollama:
         provider = "openai"
 
     if provider == "replicate":
-        # O modelo openai/gpt-4o-mini no Replicate expõe endpoint compatível com OpenAI.
-        # Usamos ChatOpenAI apontando para o proxy do Replicate para obter ChatModel
-        # (suporte a .content, tool_calls, streaming) sem código extra.
-        from langchain_openai import ChatOpenAI
-        return ChatOpenAI(
+        return _build_chat_replicate(
             model=settings.replicate_model,
+            api_token=settings.replicate_api_token,
             temperature=temperature,
-            openai_api_key=settings.replicate_api_token,
-            openai_api_base="https://api.replicate.com/v1/openai",
         )
 
     if provider == "openai":
@@ -100,7 +162,6 @@ def get_llm(temperature: float = 0):
             openai_api_key=settings.openai_api_key,
         )
 
-    # padrão: ollama
     from langchain_ollama import ChatOllama
     return ChatOllama(
         model=settings.ollama_model,
