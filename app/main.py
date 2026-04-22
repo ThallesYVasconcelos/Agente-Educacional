@@ -5,6 +5,15 @@ Interface principal Streamlit.
 Execução: python -m streamlit run app/main.py
 """
 
+import sys
+from pathlib import Path
+
+# Garante que a raiz do projeto esteja no sys.path tanto localmente
+# quanto no Streamlit Cloud (onde o cwd pode ser app/ ou a raiz do repo)
+_root = Path(__file__).resolve().parent.parent
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
+
 import streamlit as st
 
 
