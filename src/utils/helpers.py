@@ -81,12 +81,15 @@ def get_llm(temperature: float = 0):
         provider = "openai"
 
     if provider == "replicate":
-        import os
-        from langchain_community.llms import Replicate
-        os.environ.setdefault("REPLICATE_API_TOKEN", settings.replicate_api_token)
-        return Replicate(
+        # O modelo openai/gpt-4o-mini no Replicate expõe endpoint compatível com OpenAI.
+        # Usamos ChatOpenAI apontando para o proxy do Replicate para obter ChatModel
+        # (suporte a .content, tool_calls, streaming) sem código extra.
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
             model=settings.replicate_model,
-            model_kwargs={"temperature": max(temperature, 0.01), "max_new_tokens": 1024},
+            temperature=temperature,
+            openai_api_key=settings.replicate_api_token,
+            openai_api_base="https://api.replicate.com/v1/openai",
         )
 
     if provider == "openai":

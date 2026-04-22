@@ -10,18 +10,16 @@ import streamlit as st
 
 def home():
     st.set_page_config(
-        page_title="EduRAG — Assistente para Professores",
+        page_title="Assistente do Professor",
         page_icon="📚",
         layout="wide",
         initial_sidebar_state="expanded",
     )
 
-    st.title("📚 EduRAG — Assistente para Professores dos Anos Iniciais")
+    st.title("📚 Assistente do Professor")
     st.markdown(
-        """
-        Sistema RAG com agentes LangGraph para apoiar professores dos **Anos Iniciais do Ensino Fundamental** (1º ao 4º ano).
-        Baseado na **BNCC**, **PCN** e guias do **PNLD** — documentos públicos do MEC.
-        """
+        "Bem-vindo! Este assistente foi criado para **apoiar professores da Educação Básica** "
+        "na consulta a documentos oficiais do MEC — da Educação Infantil ao Ensino Médio."
     )
 
     st.divider()
@@ -30,52 +28,44 @@ def home():
 
     with col1:
         st.info(
-            "### 💬 Assistente Pedagógico\n"
-            "Tire dúvidas sobre BNCC, PCN, alfabetização, letramento e metodologias "
-            "para o 1º ao 4º ano.\n\n"
-            "Respostas com **citações** e verificação de fidelidade (Self-RAG).\n\n"
-            "**Corpus:** BNCC 2017 · PCN 1997–2000 · PNLD"
+            "### 💬 Tirar dúvidas\n"
+            "Pergunte sobre habilidades e competências da BNCC, "
+            "objetivos de aprendizagem do PCN, metodologias de alfabetização "
+            "e letramento, e orientações curriculares para qualquer ano escolar.\n\n"
+            "As respostas sempre indicam **de qual documento veio a informação**."
         )
 
     with col2:
         st.info(
-            "### 📝 Plano de Aula & BNCC\n"
-            "Gere planos de aula para o 1º ao 4º ano com habilidades BNCC (EF01–EF04), "
-            "sequência de atividades e avaliação.\n\n"
-            "**Automação:** verificador de alinhamento BNCC integrado."
+            "### 📝 Plano de Aula\n"
+            "Crie um plano de aula completo em segundos: basta informar "
+            "o componente curricular, o ano escolar e o tema ou habilidade desejada.\n\n"
+            "O plano vem pronto com objetivos, atividades, recursos e avaliação, "
+            "já alinhado à BNCC."
         )
 
     st.divider()
 
-    st.subheader("Arquitetura do sistema")
+    st.subheader("O que este assistente sabe?")
     st.markdown(
         """
-        ```
-        Usuário
-          │
-          ▼
-        Streamlit UI
-          │
-          ▼
-        LangGraph (Supervisor)
-          ├─ Q&A route   → Retriever → Safety → Writer → Self-check
-          └─ Auto route  → Automação A1/A2 (Plano de Aula / BNCC Checker)
-          │
-          ▼
-        ChromaDB (BAAI/bge-m3)        MCP Server (FastAPI)
-        BNCC · PCN · PNLD              search_docs · lesson_plan · bncc_skills
-          │
-          ▼
-        Ollama (LLM local OSS)
-        llama3.2 / qwen2.5 / mistral
-        ```
+        O assistente foi alimentado com os seguintes documentos oficiais do **Ministério da Educação (MEC)**,
+        todos de acesso público e gratuito:
+
+        | Documento | O que contém |
+        |---|---|
+        | **BNCC — Educação Infantil e Ensino Fundamental** | Habilidades e competências do 1º ao 9º ano |
+        | **PCN — Anos Iniciais (1ª a 4ª série)** | Língua Portuguesa, Matemática, Ciências, História, Geografia, Arte e Educação Física |
+        | **PCN — Anos Finais (5ª a 8ª série)** | Língua Portuguesa, Matemática, Ciências, História, Geografia, Arte, Ed. Física e Língua Estrangeira |
+        | **PCNEM — Ensino Médio** | Linguagens, Ciências da Natureza, Ciências Humanas e Bases Legais |
+        | **PCN+ — Ensino Médio** | Orientações complementares por área de conhecimento |
         """
     )
 
     st.caption(
-        "Corpus: documentos públicos do MEC (CC BY / domínio público). "
-        "As respostas têm caráter pedagógico e informativo. "
-        "MIT License | [GitHub](https://github.com/ThallesYVasconcelos/Agente-Educacional)"
+        "Todos os documentos são de domínio público (MEC/gov.br). "
+        "As respostas têm caráter pedagógico e informativo — consulte sempre o documento original para decisões formais. "
+        "[Ver código-fonte](https://github.com/ThallesYVasconcelos/Agente-Educacional)"
     )
 
 

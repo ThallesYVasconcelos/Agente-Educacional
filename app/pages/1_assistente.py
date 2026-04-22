@@ -1,112 +1,107 @@
-"""
-EduRAG — Assistente Pedagógico (Q&A com Self-RAG).
-
-Chat com o agente LangGraph: supervisor → retriever → safety → writer → self_check.
-Exibe fontes recuperadas e pontuação de fidelidade para cada resposta.
-"""
+"""Assistente Pedagógico — página de chat do professor."""
 
 import streamlit as st
 
 from src.agents.educacao_agent import EducacaoAgent
 
-st.set_page_config(page_title="Assistente Pedagógico", page_icon="💬", layout="wide")
+st.set_page_config(page_title="Tirar Dúvidas", page_icon="💬", layout="wide")
 
-st.title("💬 Assistente Pedagógico — Anos Iniciais (1º ao 4º ano)")
+st.title("💬 Tirar Dúvidas com os Documentos Oficiais")
 st.markdown(
-    "Tire dúvidas sobre **BNCC**, **PCN** e metodologias para os **Anos Iniciais do Ensino Fundamental** (1º ao 4º ano). "
-    "Todas as respostas incluem **citações** dos documentos e pontuação de fidelidade (Self-RAG)."
+    "Faça perguntas sobre **habilidades da BNCC**, **objetivos do PCN**, "
+    "**metodologias de ensino** ou qualquer orientação curricular. "
+    "O assistente busca a resposta diretamente nos documentos do MEC e indica **de onde veio cada informação**."
 )
 st.divider()
 
 # ---------------------------------------------------------------------------
-# Inicialização
+# Inicialização do agente
 # ---------------------------------------------------------------------------
 
 if "agent" not in st.session_state:
-    with st.spinner("Carregando agente..."):
+    with st.spinner("Carregando os documentos pedagógicos..."):
         st.session_state.agent = EducacaoAgent()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ---------------------------------------------------------------------------
-# Histórico de chat
+# Histórico de conversa
 # ---------------------------------------------------------------------------
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if msg["role"] == "assistant" and "meta" in msg:
-            meta = msg["meta"]
-            score = meta.get("self_check_score", 0)
-            color = "green" if score >= 0.7 else "orange" if score >= 0.5 else "red"
-            st.caption(
-                f"Fidelidade: :{color}[{score:.2f}] · "
-                f"Rota: `{meta.get('route', 'qa')}` · "
-                f"{len(meta.get('sources', []))} trechos recuperados"
-            )
+            score = msg["meta"].get("self_check_score", 0)
+            n_fontes = len(msg["meta"].get("sources", []))
+            if score >= 0.7:
+                st.caption(f"✅ Resposta embasada nos documentos · {n_fontes} trecho(s) consultado(s)")
+            elif score >= 0.5:
+                st.caption(f"⚠️ Resposta parcialmente embasada · {n_fontes} trecho(s) consultado(s)")
+            else:
+                st.caption(f"❗ Poucos trechos encontrados para esta pergunta · {n_fontes} trecho(s)")
 
 # ---------------------------------------------------------------------------
-# Input do usuário
+# Input do professor
 # ---------------------------------------------------------------------------
 
-if prompt := st.chat_input("Pergunte sobre BNCC, PCN, alfabetização ou habilidades do 1º ao 4º ano..."):
+if prompt := st.chat_input("Digite sua pergunta sobre currículo, habilidades ou metodologias..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("Consultando documentos pedagógicos..."):
+        with st.spinner("Consultando os documentos do MEC..."):
             result = st.session_state.agent.ask(prompt)
 
         answer = result["answer"]
         score = result["self_check_score"]
-        route = result["route"]
         sources = result["sources"]
 
         st.markdown(answer)
 
-        color = "green" if score >= 0.7 else "orange" if score >= 0.5 else "red"
-        st.caption(
-            f"Fidelidade: :{color}[{score:.2f}] · "
-            f"Rota: `{route}` · "
-            f"{len(sources)} trechos recuperados"
-        )
+        if score >= 0.7:
+            st.caption(f"✅ Resposta embasada nos documentos · {len(sources)} trecho(s) consultado(s)")
+        elif score >= 0.5:
+            st.caption(f"⚠️ Resposta parcialmente embasada · {len(sources)} trecho(s) consultado(s)")
+        else:
+            st.caption(f"❗ Poucos trechos encontrados para esta pergunta · {len(sources)} trecho(s)")
 
         if sources:
-            with st.expander("Ver fontes recuperadas"):
+            with st.expander("Ver trechos consultados dos documentos"):
                 for i, src in enumerate(sources, 1):
                     meta = src.get("metadata", {})
-                    source_name = meta.get("source", meta.get("source_file", "Fonte desconhecida"))
-                    page = meta.get("page", "")
-                    page_str = f" · p. {page + 1}" if page != "" else ""
-                    st.markdown(f"**{i}. {source_name}{page_str}**")
+                    doc_nome = meta.get("source", meta.get("source_file", "Documento"))
+                    pagina = meta.get("page", "")
+                    pagina_str = f" — página {pagina + 1}" if pagina != "" else ""
+                    st.markdown(f"**{i}. {doc_nome}{pagina_str}**")
                     st.markdown(f"> {src['content'][:300]}...")
                     st.divider()
 
     st.session_state.messages.append({
         "role": "assistant",
         "content": answer,
-        "meta": {"self_check_score": score, "route": route, "sources": sources},
+        "meta": {"self_check_score": score, "sources": sources},
     })
 
 # ---------------------------------------------------------------------------
-# Sidebar com exemplos
+# Barra lateral com sugestões
 # ---------------------------------------------------------------------------
 
 with st.sidebar:
-    st.subheader("Exemplos de perguntas")
-    examples = [
+    st.subheader("Sugestões de perguntas")
+    exemplos = [
         "Quais habilidades de leitura o 2º ano deve desenvolver?",
         "Como trabalhar alfabetização no 1º ano segundo a BNCC?",
         "Quais são os objetivos de Matemática para o 3º ano?",
-        "O que a BNCC diz sobre letramento para os anos iniciais?",
-        "Como a BNCC orienta o ensino de Ciências no 4º ano?",
-        "Qual a diferença entre PCN e BNCC para o ensino de LP?",
+        "O que a BNCC orienta para o ensino de Ciências no 4º ano?",
         "Quais habilidades de escrita o 3º ano deve ter?",
-        "Como trabalhar contagem e números com o 1º ano?",
+        "Como o PCN orienta o ensino de História nos anos iniciais?",
+        "O que o PCNEM diz sobre Linguagens no Ensino Médio?",
+        "Quais competências gerais a BNCC define para a Educação Básica?",
     ]
-    for ex in examples:
+    for ex in exemplos:
         st.markdown(f"- *{ex}*")
 
     st.divider()
