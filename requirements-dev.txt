@@ -1,0 +1,29 @@
+# ============================================================
+# EduRAG — Dependências de desenvolvimento local
+# NÃO instalar no Streamlit Cloud (incompatíveis com Python 3.14)
+# Uso: pip install -r requirements-dev.txt
+# Requer Python 3.11 ou 3.12
+# ============================================================
+
+-r requirements.txt
+
+# --- Ingestão de formatos extras (local apenas) ---
+unstructured>=0.14.0
+python-docx>=1.1.0
+
+# --- Avaliação RAG (requer Python <3.12) ---
+# giskard>=2.0.0
+# pandas>=2.0.0
+
+# --- MCP Server (local) ---
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+mcp>=1.0.0
+
+# --- Testes ---
+pytest>=8.2.0
+pytest-asyncio>=0.23.0
+pytest-cov>=5.0.0
+
+# --- Formatação / Qualidade ---
+ruff>=0.4.0
