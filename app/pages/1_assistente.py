@@ -13,17 +13,132 @@ from src.agents.educacao_agent import EducacaoAgent
 
 st.set_page_config(page_title="Tirar Dúvidas", page_icon="💬", layout="wide")
 
-st.title("💬 Tirar Dúvidas com os Documentos Oficiais")
-st.markdown(
-    "Faça perguntas sobre **habilidades da BNCC**, **objetivos do PCN**, "
-    "**metodologias de ensino** ou qualquer orientação curricular. "
-    "O assistente busca a resposta diretamente nos documentos do MEC e indica **de onde veio cada informação**."
-)
-st.divider()
+PAGE_CSS = """
+<style>
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 4rem;
+        max-width: 1100px;
+    }
+    .page-header {
+        background: linear-gradient(135deg, #2E5BFF 0%, #6B4EFF 100%);
+        color: #ffffff;
+        padding: 1.8rem 2rem;
+        border-radius: 18px;
+        margin-bottom: 1.8rem;
+        box-shadow: 0 12px 30px -12px rgba(46, 91, 255, 0.35);
+    }
+    .page-header h1 {
+        margin: 0 0 0.3rem 0;
+        font-size: 1.9rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+    .page-header p {
+        margin: 0;
+        font-size: 1rem;
+        opacity: 0.95;
+        line-height: 1.5;
+        max-width: 750px;
+    }
+    [data-testid="stChatMessage"] {
+        background: #ffffff;
+        border: 1px solid #E6EAF5;
+        border-radius: 14px;
+        padding: 1rem 1.2rem;
+        margin-bottom: 0.8rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    [data-testid="stChatInput"] {
+        background: #ffffff;
+        border-radius: 14px;
+        border: 2px solid #E6EAF5;
+    }
+    [data-testid="stChatInput"]:focus-within {
+        border-color: #2E5BFF;
+    }
+    .quality-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    .quality-high { background: #E6F9EE; color: #0A7B3E; }
+    .quality-mid  { background: #FFF4DA; color: #8A5A00; }
+    .quality-low  { background: #FFE6E6; color: #B00020; }
 
-# ---------------------------------------------------------------------------
-# Inicialização do agente
-# ---------------------------------------------------------------------------
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #FAFBFF 0%, #F0F3FF 100%);
+    }
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        color: #1A1F36;
+    }
+    .sidebar-suggestion {
+        background: #ffffff;
+        border: 1px solid #E6EAF5;
+        border-radius: 10px;
+        padding: 0.7rem 0.9rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.88rem;
+        color: #1A1F36;
+        line-height: 1.4;
+    }
+    .source-card {
+        background: #FAFBFF;
+        border-left: 3px solid #2E5BFF;
+        border-radius: 8px;
+        padding: 0.9rem 1rem;
+        margin-bottom: 0.8rem;
+    }
+    .source-card .source-title {
+        font-weight: 700;
+        color: #1A1F36;
+        font-size: 0.92rem;
+        margin-bottom: 0.4rem;
+    }
+    .source-card .source-text {
+        color: #5A6378;
+        font-size: 0.88rem;
+        line-height: 1.5;
+        font-style: italic;
+    }
+</style>
+"""
+
+st.markdown(PAGE_CSS, unsafe_allow_html=True)
+
+st.markdown(
+    """
+    <div class="page-header">
+        <h1>💬 Tirar Dúvidas</h1>
+        <p>
+            Pergunte sobre habilidades da BNCC, objetivos do PCN, metodologias de ensino
+            ou qualquer orientação curricular. As respostas vêm direto dos documentos do MEC,
+            com indicação clara da fonte.
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+def quality_badge(score: float, n_sources: int) -> str:
+    if score >= 0.7:
+        cls, icon, label = "quality-high", "✓", "Resposta bem embasada"
+    elif score >= 0.5:
+        cls, icon, label = "quality-mid", "⚠", "Resposta parcialmente embasada"
+    else:
+        cls, icon, label = "quality-low", "!", "Poucos trechos encontrados"
+    return (
+        f'<span class="quality-badge {cls}">{icon} {label} · '
+        f'{n_sources} trecho(s) consultado(s)</span>'
+    )
+
 
 if "agent" not in st.session_state:
     with st.spinner("Carregando os documentos pedagógicos..."):
@@ -32,26 +147,13 @@ if "agent" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ---------------------------------------------------------------------------
-# Histórico de conversa
-# ---------------------------------------------------------------------------
-
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if msg["role"] == "assistant" and "meta" in msg:
             score = msg["meta"].get("self_check_score", 0)
             n_fontes = len(msg["meta"].get("sources", []))
-            if score >= 0.7:
-                st.caption(f"✅ Resposta embasada nos documentos · {n_fontes} trecho(s) consultado(s)")
-            elif score >= 0.5:
-                st.caption(f"⚠️ Resposta parcialmente embasada · {n_fontes} trecho(s) consultado(s)")
-            else:
-                st.caption(f"❗ Poucos trechos encontrados para esta pergunta · {n_fontes} trecho(s)")
-
-# ---------------------------------------------------------------------------
-# Input do professor
-# ---------------------------------------------------------------------------
+            st.markdown(quality_badge(score, n_fontes), unsafe_allow_html=True)
 
 if prompt := st.chat_input("Digite sua pergunta sobre currículo, habilidades ou metodologias..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -67,24 +169,25 @@ if prompt := st.chat_input("Digite sua pergunta sobre currículo, habilidades ou
         sources = result["sources"]
 
         st.markdown(answer)
-
-        if score >= 0.7:
-            st.caption(f"✅ Resposta embasada nos documentos · {len(sources)} trecho(s) consultado(s)")
-        elif score >= 0.5:
-            st.caption(f"⚠️ Resposta parcialmente embasada · {len(sources)} trecho(s) consultado(s)")
-        else:
-            st.caption(f"❗ Poucos trechos encontrados para esta pergunta · {len(sources)} trecho(s)")
+        st.markdown(quality_badge(score, len(sources)), unsafe_allow_html=True)
 
         if sources:
-            with st.expander("Ver trechos consultados dos documentos"):
+            with st.expander(f"📄 Ver os {len(sources)} trechos consultados nos documentos"):
                 for i, src in enumerate(sources, 1):
                     meta = src.get("metadata", {})
                     doc_nome = meta.get("source", meta.get("source_file", "Documento"))
                     pagina = meta.get("page", "")
                     pagina_str = f" — página {pagina + 1}" if pagina != "" else ""
-                    st.markdown(f"**{i}. {doc_nome}{pagina_str}**")
-                    st.markdown(f"> {src['content'][:300]}...")
-                    st.divider()
+                    excerpt = src["content"][:300].replace("\n", " ").strip()
+                    st.markdown(
+                        f"""
+                        <div class="source-card">
+                            <div class="source-title">{i}. {doc_nome}{pagina_str}</div>
+                            <div class="source-text">"{excerpt}..."</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
 
     st.session_state.messages.append({
         "role": "assistant",
@@ -92,12 +195,8 @@ if prompt := st.chat_input("Digite sua pergunta sobre currículo, habilidades ou
         "meta": {"self_check_score": score, "sources": sources},
     })
 
-# ---------------------------------------------------------------------------
-# Barra lateral com sugestões
-# ---------------------------------------------------------------------------
-
 with st.sidebar:
-    st.subheader("Sugestões de perguntas")
+    st.markdown("### 💡 Sugestões de perguntas")
     exemplos = [
         "Quais habilidades de leitura o 2º ano deve desenvolver?",
         "Como trabalhar alfabetização no 1º ano segundo a BNCC?",
@@ -109,9 +208,12 @@ with st.sidebar:
         "Quais competências gerais a BNCC define para a Educação Básica?",
     ]
     for ex in exemplos:
-        st.markdown(f"- *{ex}*")
+        st.markdown(
+            f'<div class="sidebar-suggestion">{ex}</div>',
+            unsafe_allow_html=True,
+        )
 
-    st.divider()
-    if st.button("Limpar conversa", use_container_width=True):
+    st.markdown("---")
+    if st.button("🗑 Limpar conversa", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
