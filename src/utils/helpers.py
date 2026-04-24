@@ -1,8 +1,14 @@
 """Utilitários gerais e carregamento de configurações."""
 
+import json as _json
+import os as _os
 from functools import lru_cache
 from typing import Any, List, Optional
 
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -67,71 +73,60 @@ def get_settings() -> Settings:
 
 # ---------------------------------------------------------------------------
 # ChatReplicate — wrapper ChatModel sobre o cliente nativo do Replicate.
-# O LangChain não possui ChatReplicate nativo; o Replicate LLM legado retorna
-# string (sem .content), quebrando grafos LangGraph/LCEL.
-# Este wrapper converte mensagens LangChain → formato Replicate e devolve
-# AIMessage, tornando-o compatível com qualquer chain ou grafo.
+# Definido no nível de módulo para evitar NameError ao usar variáveis de
+# closure como defaults de atributos de classe (proibido no Python 3.14+).
 # ---------------------------------------------------------------------------
 
-def _build_chat_replicate(model: str, api_token: str, temperature: float):
-    """Constrói um ChatBaseLM mínimo para o Replicate."""
-    from langchain_core.language_models.chat_models import BaseChatModel
-    from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-    from langchain_core.outputs import ChatGeneration, ChatResult
-    import replicate as replicate_client
-    import os
+class _ChatReplicate(BaseChatModel):
+    """ChatModel mínimo que delega ao cliente nativo do Replicate."""
 
-    os.environ["REPLICATE_API_TOKEN"] = api_token
+    model_name: str = Field(default="openai/gpt-4o-mini")
+    temperature: float = Field(default=0.0)
+    api_token: str = Field(default="")
 
-    class _ChatReplicate(BaseChatModel):
-        model_name: str = model
-        temperature: float = temperature
+    @property
+    def _llm_type(self) -> str:
+        return "replicate-chat"
 
-        @property
-        def _llm_type(self) -> str:
-            return "replicate-chat"
+    def _generate(
+        self,
+        messages: List[BaseMessage],
+        stop: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        import replicate as _replicate
 
-        def _generate(
-            self,
-            messages: List[BaseMessage],
-            stop: Optional[List[str]] = None,
-            **kwargs: Any,
-        ) -> ChatResult:
-            import json as _json
+        _os.environ["REPLICATE_API_TOKEN"] = self.api_token
 
-            # Separa system prompt das demais mensagens
-            system_prompt = ""
-            replicate_messages = []
-            for m in messages:
-                if isinstance(m, SystemMessage):
-                    system_prompt = m.content
-                elif isinstance(m, HumanMessage):
-                    replicate_messages.append({"role": "user", "content": m.content})
-                elif isinstance(m, AIMessage):
-                    replicate_messages.append({"role": "assistant", "content": m.content})
-                else:
-                    replicate_messages.append({"role": "user", "content": str(m.content)})
-
-            # openai/gpt-4o-mini aceita "messages" como string JSON
-            input_payload: dict = {
-                "messages": _json.dumps(replicate_messages),
-                "temperature": max(self.temperature, 0.01),
-                "max_completion_tokens": 2048,
-            }
-            if system_prompt:
-                input_payload["system_prompt"] = system_prompt
-
-            output = replicate_client.run(self.model_name, input=input_payload)
-
-            # Replicate retorna iterator de strings
-            if hasattr(output, "__iter__") and not isinstance(output, str):
-                text = "".join(str(chunk) for chunk in output)
+        system_prompt = ""
+        replicate_messages = []
+        for m in messages:
+            if isinstance(m, SystemMessage):
+                system_prompt = m.content
+            elif isinstance(m, HumanMessage):
+                replicate_messages.append({"role": "user", "content": m.content})
+            elif isinstance(m, AIMessage):
+                replicate_messages.append({"role": "assistant", "content": m.content})
             else:
-                text = str(output)
+                replicate_messages.append({"role": "user", "content": str(m.content)})
 
-            return ChatResult(generations=[ChatGeneration(message=AIMessage(content=text))])
+        # openai/gpt-4o-mini aceita "messages" como string JSON
+        input_payload: dict = {
+            "messages": _json.dumps(replicate_messages),
+            "temperature": max(self.temperature, 0.01),
+            "max_completion_tokens": 2048,
+        }
+        if system_prompt:
+            input_payload["system_prompt"] = system_prompt
 
-    return _ChatReplicate(model_name=model, temperature=temperature)
+        output = _replicate.run(self.model_name, input=input_payload)
+
+        if hasattr(output, "__iter__") and not isinstance(output, str):
+            text = "".join(str(chunk) for chunk in output)
+        else:
+            text = str(output)
+
+        return ChatResult(generations=[ChatGeneration(message=AIMessage(content=text))])
 
 
 def get_llm(temperature: float = 0):
@@ -148,8 +143,8 @@ def get_llm(temperature: float = 0):
         provider = "openai"
 
     if provider == "replicate":
-        return _build_chat_replicate(
-            model=settings.replicate_model,
+        return _ChatReplicate(
+            model_name=settings.replicate_model,
             api_token=settings.replicate_api_token,
             temperature=temperature,
         )
