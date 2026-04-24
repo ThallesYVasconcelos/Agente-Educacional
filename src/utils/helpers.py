@@ -1,6 +1,5 @@
 """Utilitários gerais e carregamento de configurações."""
 
-import json as _json
 import os as _os
 from functools import lru_cache
 from typing import Any, List, Optional
@@ -94,32 +93,54 @@ class _ChatReplicate(BaseChatModel):
         stop: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> ChatResult:
+        """
+        O modelo openai/gpt-4o-mini no Replicate expõe `prompt` + `system_prompt`
+        (schema Cog), não o campo `messages` da API Chat da OpenAI.
+        Enviar `messages` como JSON string faz a API retornar ReplicateError (422).
+        """
         import replicate as _replicate
+        from replicate.exceptions import ReplicateError
 
-        _os.environ["REPLICATE_API_TOKEN"] = self.api_token
+        token = (self.api_token or "").strip()
+        if not token:
+            raise RuntimeError(
+                "REPLICATE_API_TOKEN não configurado. "
+                "No Streamlit Cloud: Settings → Secrets → defina REPLICATE_API_TOKEN."
+            )
+        _os.environ["REPLICATE_API_TOKEN"] = token
 
-        system_prompt = ""
-        replicate_messages = []
+        system_parts: List[str] = []
+        prompt_parts: List[str] = []
         for m in messages:
             if isinstance(m, SystemMessage):
-                system_prompt = m.content
+                system_parts.append(str(m.content))
             elif isinstance(m, HumanMessage):
-                replicate_messages.append({"role": "user", "content": m.content})
+                prompt_parts.append(str(m.content))
             elif isinstance(m, AIMessage):
-                replicate_messages.append({"role": "assistant", "content": m.content})
+                prompt_parts.append(
+                    f"[Resposta do assistente]\n{m.content}"
+                )
             else:
-                replicate_messages.append({"role": "user", "content": str(m.content)})
+                prompt_parts.append(str(m.content))
 
-        # openai/gpt-4o-mini aceita "messages" como string JSON
-        input_payload: dict = {
-            "messages": _json.dumps(replicate_messages),
-            "temperature": max(self.temperature, 0.01),
+        system_prompt = "\n\n".join(system_parts).strip()
+        prompt = "\n\n".join(prompt_parts).strip() or "Responda conforme as instruções do sistema."
+
+        input_payload: dict[str, Any] = {
+            "prompt": prompt,
+            "temperature": max(float(self.temperature), 0.01),
             "max_completion_tokens": 2048,
         }
         if system_prompt:
             input_payload["system_prompt"] = system_prompt
 
-        output = _replicate.run(self.model_name, input=input_payload)
+        try:
+            output = _replicate.run(self.model_name, input=input_payload)
+        except ReplicateError as exc:
+            detail = getattr(exc, "detail", None) or str(exc)
+            raise RuntimeError(
+                f"Erro na API do Replicate ({self.model_name}): {detail}"
+            ) from exc
 
         if hasattr(output, "__iter__") and not isinstance(output, str):
             text = "".join(str(chunk) for chunk in output)
