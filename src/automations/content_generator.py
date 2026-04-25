@@ -32,6 +32,50 @@ def _strip_code_fences(text: str) -> str:
     text = re.sub(r"```", "", text)
     return text.strip()
 
+
+def _fix_latex(text: str) -> str:
+    """
+    Converte notação LaTeX residual em texto legível.
+    Mesmo com instruções explícitas, o LLM às vezes insiste em usar LaTeX.
+    """
+    # Remove delimitadores LaTeX inline: \( ... \) e $ ... $
+    text = re.sub(r"\\\((.+?)\\\)", lambda m: _latex_to_text(m.group(1)), text)
+    text = re.sub(r"\$(.+?)\$", lambda m: _latex_to_text(m.group(1)), text)
+    # Remove delimitadores LaTeX em bloco: \[ ... \]
+    text = re.sub(r"\\\[(.+?)\\\]", lambda m: _latex_to_text(m.group(1)), text, flags=re.DOTALL)
+    return text
+
+
+def _latex_to_text(expr: str) -> str:
+    """Converte expressão LaTeX simples em texto legível."""
+    expr = expr.strip()
+    # Operadores
+    expr = expr.replace(r"\times", "×")
+    expr = expr.replace(r"\div", "÷")
+    expr = expr.replace(r"\cdot", "×")
+    expr = expr.replace(r"\neq", "≠")
+    expr = expr.replace(r"\leq", "≤")
+    expr = expr.replace(r"\geq", "≥")
+    expr = expr.replace(r"\pm", "±")
+    expr = expr.replace(r"\sqrt", "√")
+    expr = expr.replace(r"\frac", "/")
+    # Sobrescritos comuns para potências
+    sup_map = {"0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+               "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+               "n": "ⁿ", "m": "ᵐ"}
+    # a^{n} → aⁿ  ou  a^n → aⁿ
+    def replace_pow(m: re.Match) -> str:
+        base = m.group(1)
+        exp = m.group(2).strip("{}")
+        sup = "".join(sup_map.get(c, c) for c in exp)
+        return f"{base}{sup}"
+    expr = re.sub(r"([a-zA-Z0-9])\^\{?([^}^\s]+)\}?", replace_pow, expr)
+    # Remove chaves restantes
+    expr = expr.replace("{", "").replace("}", "")
+    # Remove barras invertidas soltas
+    expr = re.sub(r"\\([a-zA-Z]+)", r"\1", expr)
+    return expr
+
 from src.rag.vectorstore import similarity_search
 from src.utils.helpers import get_llm
 from src.utils.logger import get_logger
@@ -222,7 +266,9 @@ _DEFAULT_SCOPE = (
 # ---------------------------------------------------------------------------
 
 CONTENT_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """Você é um professor especialista em didática do Ensino Básico brasileiro.
+    ("system", """Você é um professor especialista em didática do Ensino Básico brasileiro,
+com ampla experiência em elaborar materiais pedagógicos claros e acessíveis.
+
 Sua tarefa é gerar o CONTEÚDO DIDÁTICO de uma aula, complementando o plano de aula com material
 explicativo, exemplos e atividades práticas.
 
@@ -237,6 +283,20 @@ conforme a BNCC e o PCN. Abaixo está o escopo curricular oficial para este ano 
 - NÃO antecipe conteúdos de anos seguintes (mesmo que pareça natural).
 - NÃO simplifique a ponto de cobrir conteúdos de anos anteriores (salvo revisão necessária).
 
+⚠️ REGRAS DE FORMATAÇÃO — OBRIGATÓRIAS:
+1. NUNCA use notação LaTeX (como \\times, \\div, \\frac, ^{{}} entre parênteses).
+   Em vez disso, escreva as operações em texto simples:
+   - Use × para multiplicação (ou escreva "vezes")
+   - Use ÷ para divisão (ou escreva "dividido por")
+   - Para potências, escreva: 2³, 5², 3⁴  (use os caracteres sobrescritos ³ ² ⁴ ⁵ ⁶)
+   - OU escreva por extenso: "2 elevado à 3" = 2 × 2 × 2 = 8
+2. Escreva em português claro e acessível — como um professor explicaria pessoalmente.
+3. Nas propriedades e fórmulas, use linguagem textual:
+   - Em vez de a^m × a^n = a^(m+n), escreva:
+     "Produto de potências de mesma base: mantemos a base e somamos os expoentes.
+      Exemplo: 2³ × 2² = 2^(3+2) = 2⁵ = 32"
+4. Não use parênteses matemáticos isolados como (a^m) — escreva diretamente.
+
 Contexto dos documentos curriculares oficiais (BNCC/PCN):
 {context}
 
@@ -248,24 +308,27 @@ Estruture o conteúdo em Markdown com as seguintes seções OBRIGATÓRIAS:
 Liste os códigos e descrições das habilidades deste ano que esta aula desenvolve.
 
 ## 🚫 O que NÃO trabalhar neste ano
-Liste explicitamente os subtópicos que pertencem a anos superiores e devem ser evitados
-(com a informação de em que ano aparecem).
+Liste explicitamente os subtópicos que pertencem a anos superiores e devem ser evitados,
+com a informação de em que ano eles aparecem.
 
 ## 📖 Conteúdo: Explicação para o Professor
 Explicação completa do conteúdo para o professor dominar o tema.
-Inclua: definições, conceitos-chave, contexto histórico/prático quando relevante.
+Inclua: definições em linguagem acessível, conceitos-chave, contexto prático quando relevante.
+Use exemplos numéricos escritos de forma simples, sem notação LaTeX.
 
-## 🎓 Como Apresentar aos Alunos (Linguagem Didática)
-Roteiro de como explicar o conteúdo em sala, usando linguagem adequada à faixa etária.
-Inclua: analogias, perguntas disparadoras, exemplos concretos do cotidiano.
+## 🎓 Como Apresentar aos Alunos
+Roteiro de como explicar o conteúdo em sala, com linguagem adequada à faixa etária.
+Inclua: analogias do cotidiano, perguntas disparadoras, exemplos práticos e concretos.
+Escreva como se estivesse orientando o professor a falar com os alunos.
 
 ## 📝 Exemplos Resolvidos
-Pelo menos 3 exemplos resolvidos passo a passo, do mais simples ao mais complexo,
-respeitando o escopo do ano.
+Pelo menos 3 exemplos resolvidos passo a passo, do mais simples ao mais complexo.
+Escreva os cálculos de forma clara, em texto: "3 × 3 × 3 = 27, portanto 3³ = 27".
 
 ## ✏️ Atividades para os Alunos
 5 a 8 exercícios graduados (fácil → médio → desafiador), todos dentro do escopo do ano.
 Para cada atividade, indique o objetivo e a habilidade BNCC exercitada.
+Escreva enunciados claros, sem notação LaTeX.
 
 ## 💡 Dicas Pedagógicas
 Erros comuns dos alunos neste conteúdo e como o professor pode abordá-los.
@@ -275,7 +338,8 @@ Sugestões de materiais concretos, jogos ou recursos digitais adequados ao ano.
 Componente curricular: {componente}
 Ano escolar: {ano}
 
-Gere o conteúdo completo da aula respeitando o escopo curricular do ano informado."""),
+Gere o conteúdo completo da aula respeitando o escopo curricular do ano informado.
+Lembre-se: sem notação LaTeX, escreva tudo em português claro."""),
 ])
 
 
@@ -299,13 +363,42 @@ def generate_class_content(
         .get(ano_escolar, _DEFAULT_SCOPE)
     )
 
-    # Busca contexto nos documentos curriculares
-    query = f"{componente} {topico} {ano_escolar} habilidades BNCC PCN conteúdo"
-    docs = similarity_search(query, k=8)
+    # Busca contexto nos documentos curriculares com queries específicas
+    # 1ª busca: habilidades BNCC específicas do tópico e ano
+    query_habilidades = f"habilidades BNCC {topico} {ano_escolar} {componente} EF"
+    # 2ª busca: conteúdo pedagógico do tópico
+    query_conteudo = f"{topico} {componente} {ano_escolar} ensino aprendizagem"
+
+    docs_hab = similarity_search(query_habilidades, k=5)
+    docs_cont = similarity_search(query_conteudo, k=4)
+
+    # Junta e deduplica por conteúdo, priorizando os de habilidades
+    seen_contents: set[str] = set()
+    docs = []
+    for d in docs_hab + docs_cont:
+        key = d.page_content[:120]
+        if key not in seen_contents:
+            seen_contents.add(key)
+            docs.append(d)
+
+    # Filtra trechos puramente estruturais/de apresentação da BNCC (pouco úteis)
+    _SKIP_PHRASES = [
+        "está organizado em cinco áreas",
+        "competência específica à qual cada habilidade",
+        "recentes mudanças na LDB",
+        "Currículos: BNCC e itinerários",
+        "itinerários formativos",
+        "Parecer CNE/CEB",
+    ]
+    docs = [
+        d for d in docs
+        if not any(phrase in d.page_content for phrase in _SKIP_PHRASES)
+    ][:8]
+
     context = "\n\n---\n\n".join(
         f"[{d.metadata.get('source', 'Fonte')}] {d.page_content}"
         for d in docs
-    ) or "Sem trechos encontrados no corpus. Use o escopo curricular acima como referência principal."
+    ) or "Sem trechos específicos encontrados no corpus. Use o escopo curricular acima como referência principal."
 
     llm = get_llm(temperature=0.3)
     chain = CONTENT_PROMPT | llm
@@ -317,7 +410,7 @@ def generate_class_content(
         "escopo_curricular": escopo,
         "context": context,
     })
-    content_text: str = _strip_code_fences(response.content)
+    content_text: str = _fix_latex(_strip_code_fences(response.content))
 
     # Valida seções obrigatórias
     required = [
