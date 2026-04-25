@@ -700,66 +700,49 @@ Lembre-se: sem notação LaTeX, escreva tudo em português claro."""),
 ])
 
 
-def generate_class_content(
-    topico: str,
-    componente: str,
-    ano_escolar: str,
-) -> dict:
-    """
-    Gera o conteúdo didático de uma aula respeitando o escopo curricular do ano.
+_SKIP_PHRASES = [
+    "está organizado em cinco áreas",
+    "competência específica à qual cada habilidade",
+    "recentes mudanças na LDB",
+    "Currículos: BNCC e itinerários",
+    "itinerários formativos",
+    "Parecer CNE/CEB",
+]
 
-    Returns:
-        dict com 'content' (markdown), 'escopo_usado', 'elapsed_seconds', 'success', 'sources'
-    """
-    start = time.time()
 
-    # Obtém o escopo curricular para este ano/disciplina
-    escopo = (
-        CURRICULUM_SCOPE
-        .get(componente, {})
-        .get(ano_escolar, _DEFAULT_SCOPE)
-    )
-
-    # Busca contexto nos documentos curriculares com queries específicas
-    # 1ª busca: habilidades BNCC específicas do tópico e ano
+def _retrieve_docs(topico: str, componente: str, ano_escolar: str):
+    """Busca e filtra documentos curriculares relevantes."""
     query_habilidades = f"habilidades BNCC {topico} {ano_escolar} {componente} EF"
-    # 2ª busca: conteúdo pedagógico do tópico
     query_conteudo = f"{topico} {componente} {ano_escolar} ensino aprendizagem"
 
     docs_hab = similarity_search(query_habilidades, k=5)
     docs_cont = similarity_search(query_conteudo, k=4)
 
-    # Junta e deduplica por conteúdo, priorizando os de habilidades
-    seen_contents: set[str] = set()
+    seen: set[str] = set()
     docs = []
     for d in docs_hab + docs_cont:
         key = d.page_content[:120]
-        if key not in seen_contents:
-            seen_contents.add(key)
+        if key not in seen:
+            seen.add(key)
             docs.append(d)
 
-    # Filtra trechos puramente estruturais/de apresentação da BNCC (pouco úteis)
-    _SKIP_PHRASES = [
-        "está organizado em cinco áreas",
-        "competência específica à qual cada habilidade",
-        "recentes mudanças na LDB",
-        "Currículos: BNCC e itinerários",
-        "itinerários formativos",
-        "Parecer CNE/CEB",
-    ]
-    docs = [
+    return [
         d for d in docs
         if not any(phrase in d.page_content for phrase in _SKIP_PHRASES)
     ][:8]
 
-    context = "\n\n---\n\n".join(
-        f"[{d.metadata.get('source', 'Fonte')}] {d.page_content}"
-        for d in docs
-    ) or "Sem trechos específicos encontrados no corpus. Use o escopo curricular acima como referência principal."
 
-    llm = get_llm(temperature=0.3)
+def _invoke_content_llm(
+    topico: str,
+    componente: str,
+    ano_escolar: str,
+    escopo: str,
+    context: str,
+    temperature: float = 0.3,
+) -> str:
+    """Invoca o LLM e retorna o texto limpo."""
+    llm = get_llm(temperature=temperature)
     chain = CONTENT_PROMPT | llm
-
     response = chain.invoke({
         "topico": topico,
         "componente": componente,
@@ -767,19 +750,87 @@ def generate_class_content(
         "escopo_curricular": escopo,
         "context": context,
     })
-    content_text: str = _fix_latex(_strip_code_fences(response.content))
+    return _fix_latex(_strip_code_fences(response.content))
+
+
+def generate_class_content(
+    topico: str,
+    componente: str,
+    ano_escolar: str,
+    max_retries: int = 2,
+) -> dict:
+    """
+    Gera o conteúdo didático de uma aula respeitando o escopo curricular do ano.
+    Inclui auto-verificação curricular com retry automático em caso de violação.
+
+    Returns:
+        dict com 'content', 'escopo_usado', 'elapsed_seconds', 'success',
+        'sources', 'check_result' (CheckResult), 'attempts'
+    """
+    from src.utils.curriculum_checker import check_content
+
+    start = time.time()
+
+    escopo = (
+        CURRICULUM_SCOPE
+        .get(componente, {})
+        .get(ano_escolar, _DEFAULT_SCOPE)
+    )
+
+    docs = _retrieve_docs(topico, componente, ano_escolar)
+    context = "\n\n---\n\n".join(
+        f"[{d.metadata.get('source', 'Fonte')}] {d.page_content}"
+        for d in docs
+    ) or "Sem trechos específicos encontrados. Use o escopo curricular como referência."
+
+    content_text = ""
+    check_result = None
+    attempt = 0
+
+    # Temperatura aumenta ligeiramente a cada retry para variar o output
+    temperatures = [0.3, 0.2, 0.15]
+
+    for attempt in range(max_retries + 1):
+        temp = temperatures[min(attempt, len(temperatures) - 1)]
+        content_text = _invoke_content_llm(
+            topico, componente, ano_escolar, escopo, context, temperature=temp
+        )
+
+        # Nível 1 (escopo local) sempre; Nível 2 (LLM) apenas na última tentativa
+        # para economizar tokens — nas primeiras só o check rápido
+        run_trace = (attempt == max_retries)
+        check_result = check_content(
+            content=content_text,
+            componente=componente,
+            ano=ano_escolar,
+            escopo=escopo,
+            run_traceability=run_trace,
+        )
+
+        logger.info(
+            "content_check",
+            attempt=attempt + 1,
+            approved=check_result.approved,
+            scope_ok=check_result.scope_ok,
+            trust_score=check_result.trust_score,
+            violations=check_result.violations,
+        )
+
+        if check_result.approved:
+            break
+
+        if attempt < max_retries:
+            logger.warning(
+                "content_retry",
+                attempt=attempt + 1,
+                violations=check_result.violations,
+            )
 
     # Valida seções obrigatórias
-    required = [
-        "Habilidades BNCC",
-        "O que NÃO trabalhar",
-        "Conteúdo",
-        "Exemplos Resolvidos",
-        "Atividades",
-    ]
+    required = ["Habilidades BNCC", "O que NÃO trabalhar", "Conteúdo", "Exemplos Resolvidos", "Atividades"]
     sections_ok = sum(1 for s in required if s in content_text)
     elapsed = round(time.time() - start, 2)
-    success = sections_ok >= 4 and elapsed < 90
+    success = sections_ok >= 4 and elapsed < 120
 
     logger.info(
         "content_generated",
@@ -789,6 +840,7 @@ def generate_class_content(
         sections_ok=sections_ok,
         elapsed=elapsed,
         success=success,
+        attempts=attempt + 1,
     )
 
     return {
@@ -796,6 +848,8 @@ def generate_class_content(
         "escopo_usado": escopo,
         "elapsed_seconds": elapsed,
         "success": success,
+        "check_result": check_result,
+        "attempts": attempt + 1,
         "sources": [
             {"content": d.page_content[:300], "metadata": d.metadata}
             for d in docs

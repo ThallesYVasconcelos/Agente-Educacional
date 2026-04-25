@@ -304,21 +304,58 @@ def generate_activities(
 
     llm = get_llm(temperature=0.4)
 
-    # ── Passo 1: Geração ──────────────────────────────────────────────────
-    logger.info("activity_generation_start", topico=topico, componente=componente, ano=ano_escolar)
-    gen_chain = _GENERATION_PROMPT | llm
-    gen_response = gen_chain.invoke({
-        "topico": topico,
-        "componente": componente,
-        "ano": ano_escolar,
-        "escopo_curricular": escopo_curto,
-        "tipo_descricao": tipo_descricao,
-        "quantidade": quantidade,
-        "context": context,
-    })
+    from src.utils.curriculum_checker import check_content
 
-    raw_gen = _fix_latex(_strip_code_fences(gen_response.content))
-    data = _parse_json_safely(raw_gen)
+    # ── Passo 1: Geração com retry por violação de escopo ─────────────────
+    logger.info("activity_generation_start", topico=topico, componente=componente, ano=ano_escolar)
+
+    data = None
+    check_result = None
+    MAX_GEN_RETRIES = 2
+
+    for gen_attempt in range(MAX_GEN_RETRIES + 1):
+        gen_llm = get_llm(temperature=0.4 - gen_attempt * 0.1)
+        gen_chain = _GENERATION_PROMPT | gen_llm
+        gen_response = gen_chain.invoke({
+            "topico": topico,
+            "componente": componente,
+            "ano": ano_escolar,
+            "escopo_curricular": escopo_curto,
+            "tipo_descricao": tipo_descricao,
+            "quantidade": quantidade,
+            "context": context,
+        })
+
+        raw_gen = _fix_latex(_strip_code_fences(gen_response.content))
+        data = _parse_json_safely(raw_gen)
+
+        if not data or not data.get("questoes"):
+            continue  # tenta de novo
+
+        # Verifica escopo (nível 1, rápido) nas questões geradas
+        questoes_text = " ".join(
+            q.get("enunciado", "") + " " + q.get("resposta_correta", "")
+            for q in data.get("questoes", [])
+        )
+        check_result = check_content(
+            content=questoes_text,
+            componente=componente,
+            ano=ano_escolar,
+            escopo=escopo_curto,
+            run_traceability=False,  # rápido — sem LLM aqui
+        )
+
+        logger.info(
+            "activity_scope_check",
+            attempt=gen_attempt + 1,
+            scope_ok=check_result.scope_ok,
+            violations=check_result.violations,
+        )
+
+        if check_result.scope_ok:
+            break
+
+        logger.warning("activity_scope_violation_retry", violations=check_result.violations)
 
     if not data or not data.get("questoes"):
         elapsed = round(time.time() - start, 2)
@@ -329,14 +366,14 @@ def generate_activities(
             "data": None,
             "validated": False,
             "corrections": 0,
+            "check_result": None,
             "elapsed_seconds": elapsed,
             "success": False,
             "error": "Não foi possível gerar as atividades. Tente reformular o tópico ou reduzir a quantidade de questões.",
             "sources": [],
         }
 
-    # ── Passo 2: Validação ────────────────────────────────────────────────
-    # Envia JSON compacto (sem indentação) para reduzir tokens
+    # ── Passo 2: Validação de respostas ───────────────────────────────────
     logger.info("activity_validation_start", questoes=len(data.get("questoes", [])))
     val_llm = get_llm(temperature=0.1)
     val_chain = _VALIDATION_PROMPT | val_llm
@@ -348,7 +385,6 @@ def generate_activities(
     raw_val = _fix_latex(_strip_code_fences(val_response.content))
     validated_data = _parse_json_safely(raw_val)
 
-    # Se a validação falhou no parse, usa os dados originais
     if not validated_data or not validated_data.get("questoes"):
         validated_data = data
         validated = False
@@ -367,6 +403,7 @@ def generate_activities(
         "activity_generation_complete",
         validated=validated,
         corrections=corrections,
+        scope_ok=check_result.scope_ok if check_result else None,
         elapsed=elapsed,
         success=success,
     )
@@ -377,6 +414,7 @@ def generate_activities(
         "data": validated_data,
         "validated": validated,
         "corrections": corrections,
+        "check_result": check_result,
         "elapsed_seconds": elapsed,
         "success": success,
         "sources": [

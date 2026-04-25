@@ -512,7 +512,28 @@ with tab2:
                 result = generate_class_content(topico, comp_c_efetivo, ano_content)
 
             if result["success"]:
-                st.success("Conteúdo gerado com sucesso! Dentro do escopo curricular do ano.")
+                chk = result.get("check_result")
+                if chk:
+                    attempts = result.get("attempts", 1)
+                    if chk.approved:
+                        color = chk.trust_color
+                        label = chk.trust_label.upper()
+                        retry_note = f" (verificado em {attempts} tentativa{'s' if attempts > 1 else ''})" if attempts > 1 else ""
+                        st.markdown(
+                            f'<div style="background:#F0FBF4;border-left:4px solid {color};'
+                            f'border-radius:8px;padding:0.7rem 1rem;margin-bottom:0.8rem;">'
+                            f'✅ <strong>Conteúdo aprovado</strong> — Confiança curricular: '
+                            f'<span style="color:{color};font-weight:700;">{label}</span>'
+                            f'{retry_note}</div>',
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        st.warning(
+                            f"⚠️ Conteúdo gerado com ressalvas. {chk.detail} "
+                            "Revise antes de usar em sala."
+                        )
+                else:
+                    st.success("Conteúdo gerado com sucesso!")
             else:
                 st.info(
                     "Conteúdo gerado. Revise se está adequado ao nível da turma "

@@ -256,14 +256,32 @@ if gerar:
         st.error(result.get("error", "Erro ao gerar atividades. Tente novamente."))
         st.stop()
 
-    # Badges de status
-    status_html = '<span class="validated-badge">✅ Gabarito validado automaticamente</span>'
+    # Badge de confiabilidade curricular
+    chk = result.get("check_result")
+    if chk:
+        if chk.scope_ok:
+            scope_badge = (
+                f'<span style="background:#E6F9EE;color:#0A7B3E;border:1px solid #A8E6C0;'
+                f'border-radius:20px;padding:0.25rem 0.85rem;font-size:0.85rem;font-weight:600;">'
+                f'✅ Escopo curricular verificado</span>'
+            )
+        else:
+            scope_badge = (
+                f'<span style="background:#FFF4DA;color:#8A5A00;border:1px solid #F5D87A;'
+                f'border-radius:20px;padding:0.25rem 0.85rem;font-size:0.85rem;font-weight:600;">'
+                f'⚠️ Possível desvio de escopo — revise</span>'
+            )
+        st.markdown(scope_badge, unsafe_allow_html=True)
+        if chk.violations:
+            st.caption(f"Termos monitorados: {', '.join(chk.violations)}")
+
+    val_html = '<span class="validated-badge">✅ Respostas validadas automaticamente</span>'
     if result["corrections"] > 0:
-        status_html += (
+        val_html += (
             f'<span class="correction-badge">'
             f'🔧 {result["corrections"]} questão(ões) corrigida(s)</span>'
         )
-    st.markdown(status_html, unsafe_allow_html=True)
+    st.markdown(val_html, unsafe_allow_html=True)
     st.caption(f"Gerado em {result['elapsed_seconds']}s")
 
     # Abas: aluno / professor
