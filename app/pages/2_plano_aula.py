@@ -11,6 +11,7 @@ import streamlit as st
 
 from src.automations.lesson_plan import generate_lesson_plan
 from src.automations.content_generator import generate_class_content, CURRICULUM_SCOPE
+from src.utils.pdf_export import markdown_to_pdf
 
 st.set_page_config(page_title="Plano de Aula", page_icon="📝", layout="wide")
 
@@ -241,12 +242,24 @@ with tab1:
             st.markdown(result["lesson_plan"])
             st.markdown("---")
 
-            col_dl, _ = st.columns([1, 2])
-            with col_dl:
+            nome_base = f"plano_{componente.lower().replace(' ', '_')}"
+            col_pdf, col_md, _ = st.columns([1, 1, 1])
+            with col_pdf:
+                titulo_pdf = f"Plano de Aula — {componente} ({ano})"
+                pdf_bytes = markdown_to_pdf(result["lesson_plan"], titulo_pdf)
                 st.download_button(
-                    "⬇️ Baixar plano (.md)",
-                    data=result["lesson_plan"],
-                    file_name=f"plano_{componente.lower().replace(' ', '_')}.md",
+                    "⬇️ Baixar PDF",
+                    data=pdf_bytes,
+                    file_name=f"{nome_base}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    type="primary",
+                )
+            with col_md:
+                st.download_button(
+                    "⬇️ Baixar Markdown",
+                    data=result["lesson_plan"].encode("utf-8"),
+                    file_name=f"{nome_base}.md",
                     mime="text/markdown",
                     use_container_width=True,
                 )
@@ -345,16 +358,27 @@ with tab2:
             st.markdown(result["content"])
             st.markdown("---")
 
-            col_dl, _ = st.columns([1, 2])
-            with col_dl:
-                nome_arquivo = (
-                    f"conteudo_{topico[:30].lower().replace(' ', '_')}"
-                    f"_{ano_content[:6].replace('º', '').replace(' ', '')}.md"
-                )
+            slug = (
+                f"conteudo_{topico[:30].lower().replace(' ', '_')}"
+                f"_{ano_content[:6].replace('º', '').replace(' ', '')}"
+            )
+            col_pdf2, col_md2, _ = st.columns([1, 1, 1])
+            with col_pdf2:
+                titulo_pdf2 = f"Conteúdo da Aula — {topico} ({ano_content})"
+                pdf_bytes2 = markdown_to_pdf(result["content"], titulo_pdf2)
                 st.download_button(
-                    "⬇️ Baixar conteúdo (.md)",
-                    data=result["content"],
-                    file_name=nome_arquivo,
+                    "⬇️ Baixar PDF",
+                    data=pdf_bytes2,
+                    file_name=f"{slug}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    type="primary",
+                )
+            with col_md2:
+                st.download_button(
+                    "⬇️ Baixar Markdown",
+                    data=result["content"].encode("utf-8"),
+                    file_name=f"{slug}.md",
                     mime="text/markdown",
                     use_container_width=True,
                 )

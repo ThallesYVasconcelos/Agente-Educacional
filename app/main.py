@@ -274,6 +274,102 @@ def home():
         unsafe_allow_html=True,
     )
 
+    # -----------------------------------------------------------------------
+    # Seção explicativa: o que são BNCC e PCN
+    # -----------------------------------------------------------------------
+    st.markdown(
+        """
+        <div style="margin: 1.5rem 0 0.5rem 0;">
+            <h3 style="font-size:1.25rem; color:#1A1F36; margin-bottom:0.8rem;">
+                📘 Entenda os documentos que guiam este assistente
+            </h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    col_bncc, col_pcn, col_pcnem = st.columns(3, gap="large")
+
+    with col_bncc:
+        st.markdown(
+            """
+            <div class="feature-card" style="border-top: 4px solid #2E5BFF;">
+                <span class="feature-icon">📗</span>
+                <h3>BNCC</h3>
+                <p style="font-size:0.88rem; margin-bottom:0.7rem;">
+                    <strong>Base Nacional Comum Curricular</strong><br>
+                    Documento aprovado em 2018 pelo MEC que define as <strong>habilidades e competências</strong>
+                    que todos os estudantes brasileiros têm direito de aprender, da Educação Infantil
+                    ao Ensino Médio.
+                </p>
+                <p style="font-size:0.85rem; color:#5A6378;">
+                    Cada habilidade tem um código único — como <strong>EF06MA07</strong>
+                    (EF = Ensino Fundamental, 06 = 6º ano, MA = Matemática, 07 = 7ª habilidade).
+                    É a referência obrigatória para todas as escolas públicas e privadas do Brasil.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with col_pcn:
+        st.markdown(
+            """
+            <div class="feature-card" style="border-top: 4px solid #6B4EFF;">
+                <span class="feature-icon">📘</span>
+                <h3>PCN</h3>
+                <p style="font-size:0.88rem; margin-bottom:0.7rem;">
+                    <strong>Parâmetros Curriculares Nacionais</strong><br>
+                    Publicados pelo MEC em <strong>1997</strong> (Anos Iniciais) e <strong>1998</strong>
+                    (Anos Finais), foram o principal documento orientador do currículo antes da BNCC.
+                </p>
+                <p style="font-size:0.85rem; color:#5A6378;">
+                    Apresentam os <strong>objetivos, conteúdos e orientações didáticas</strong>
+                    por disciplina e ciclo escolar. Ainda são referência valiosa para metodologias
+                    de ensino, especialmente nos anos iniciais do Fundamental.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with col_pcnem:
+        st.markdown(
+            """
+            <div class="feature-card" style="border-top: 4px solid #B23CFF;">
+                <span class="feature-icon">📙</span>
+                <h3>PCNEM / PCN+</h3>
+                <p style="font-size:0.88rem; margin-bottom:0.7rem;">
+                    <strong>Parâmetros Curriculares do Ensino Médio</strong><br>
+                    Publicados em <strong>1999</strong> (PCNEM) e <strong>2002</strong> (PCN+),
+                    orientam o currículo do 1º ao 3º ano do Ensino Médio por área do conhecimento.
+                </p>
+                <p style="font-size:0.85rem; color:#5A6378;">
+                    Organizam os conteúdos em quatro grandes áreas:
+                    <strong>Linguagens</strong>, <strong>Ciências da Natureza</strong>,
+                    <strong>Ciências Humanas</strong> e <strong>Matemática</strong>,
+                    enfatizando competências e interdisciplinaridade.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        """
+        <div style="background:#F0F3FF; border-radius:12px; padding:0.85rem 1.2rem;
+                    margin:1rem 0 1.5rem 0; font-size:0.9rem; color:#3A4870;">
+            <strong>Qual a relação entre eles?</strong>
+            Os PCN e PCNEM foram os documentos orientadores até 2017.
+            A BNCC os atualizou e unificou, tornando-se a referência nacional vigente.
+            Este assistente usa <strong>todos eles</strong> como fonte —
+            o que garante riqueza de orientações metodológicas (PCN) e
+            alinhamento ao currículo atual (BNCC).
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.markdown("### Como posso te ajudar hoje?")
 
     col1, col2 = st.columns(2, gap="large")

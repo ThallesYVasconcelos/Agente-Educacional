@@ -38,6 +38,9 @@ lxml>=5.0.0
 # --- Interface ---
 streamlit>=1.35.0
 
+# --- Exportação PDF (puro Python, UTF-8, sem dependências de sistema) ---
+fpdf2>=2.7.0
+
 # --- Utilitários ---
 python-dotenv>=1.0.0
 pydantic>=2.7.0
