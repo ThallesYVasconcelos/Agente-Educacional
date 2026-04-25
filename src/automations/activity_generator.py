@@ -95,16 +95,29 @@ _GENERATION_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """Você é professor especialista em Educação Básica brasileira.
 Gere atividades pedagógicas DIRETAMENTE sobre o tópico informado.
 
-⚠️ REGRA PRINCIPAL: TODAS as questões devem ser EXPLICITAMENTE sobre "{topico}".
-Não gere questões de outros conteúdos. Não use o tópico apenas como "contexto" de um
-problema de outro assunto. O tópico deve ser o objeto direto de cálculo ou raciocínio.
+⚠️ REGRA PRINCIPAL: TODAS as questões devem ser EXPLICITAMENTE sobre "{topico}" na disciplina "{componente}".
 
-Exemplo ERRADO (tópico: Potenciação):
-  "Maria tem 3 caixas com 4 docinhos cada. Quantos docinhos no total?" ← isso é multiplicação, NÃO potenciação.
+ATENÇÃO — ERROS COMUNS A EVITAR:
+- Para disciplinas de Ciências, Biologia, Geografia, História, Arte, Língua Portuguesa etc.,
+  NÃO gere questões de Matemática disfarçadas de outro tema.
+  Exemplo ERRADO (tópico: Ecologia básica | disciplina: Ciências):
+    "Uma floresta tem 120 árvores. Se 30% são frutíferas, quantas são frutíferas?"
+    → Isso é um problema de porcentagem (Matemática), NÃO de Ecologia.
+  Exemplo CERTO (tópico: Ecologia básica | disciplina: Ciências):
+    "O que é uma cadeia alimentar? Cite dois exemplos de produtores e consumidores."
+    "Explique a diferença entre cadeia alimentar e teia alimentar."
+    "Por que os decompositores são importantes para o equilíbrio do ecossistema?"
 
-Exemplo CERTO (tópico: Potenciação):
-  "Calcule 3⁴." ou "Uma bactéria se duplica a cada hora. Partindo de 1 bactéria, quantas
-   haverá após 5 horas? Escreva como potência e calcule."
+- Para disciplinas de exatas (Matemática, Física, Química), o enunciado pode conter cálculos,
+  mas somente sobre "{topico}".
+  Exemplo ERRADO (tópico: Potenciação | disciplina: Matemática):
+    "Maria tem 3 caixas com 4 docinhos cada. Quantos docinhos no total?" → é multiplicação.
+  Exemplo CERTO (tópico: Potenciação | disciplina: Matemática):
+    "Calcule 3⁴." ou "Uma bactéria duplica a cada hora partindo de 1. Quantas após 5 horas? Expresse como potência."
+
+TIPO DE ATIVIDADE para disciplinas de Ciências Humanas e da Natureza (exceto Matemática):
+- Prefira questões dissertativas, de análise, identificação de conceitos e relacionamento de ideias.
+- Situações-problema nessas disciplinas devem exigir raciocínio científico, não cálculo numérico.
 
 ESCOPO CURRICULAR ({ano} — {componente}):
 {escopo_curricular}
@@ -117,19 +130,20 @@ REGRAS ADICIONAIS:
 - Gradação obrigatória: distribua entre fácil, médio e desafiador.
 
 Retorne APENAS este JSON (sem markdown, sem texto extra):
-{{"titulo":"...","disciplina":"{componente}","ano":"{ano}","topico":"{topico}","habilidades_gerais":["EF.."],"questoes":[{{"numero":1,"tipo":"calculo|multipla_escolha|situacao_problema","enunciado":"...","alternativas":[],"resposta_correta":"...","resolucao_passo_a_passo":"Passo 1:... Resultado:...","habilidade_bncc":"EF..","nivel":"facil|medio|desafiador"}}]}}
+{{"titulo":"...","disciplina":"{componente}","ano":"{ano}","topico":"{topico}","habilidades_gerais":["EM13.." ou "EF.."],"questoes":[{{"numero":1,"tipo":"dissertativa|multipla_escolha|situacao_problema|calculo","enunciado":"...","alternativas":[],"resposta_correta":"...","resolucao_passo_a_passo":"Passo 1:... Resultado:...","habilidade_bncc":"EM13.. ou EF..","nivel":"facil|medio|desafiador"}}]}}
 
 alternativas: lista vazia [] exceto em múltipla escolha.
 """),
     ("human", """Disciplina: {componente} | Ano: {ano} | Tópico: {topico}
 Tipo: {tipo_descricao} | Questões: {quantidade}
 
-IMPORTANTE: todas as questões devem ser sobre {topico}, de forma explícita.
+IMPORTANTE: todas as questões devem testar compreensão de "{topico}" em "{componente}".
+NÃO use cálculos matemáticos de outras áreas para contextualizar o tema.
 
 Referência curricular (BNCC/PCN):
 {context}
 
-Gere o JSON com exatamente {quantidade} questões sobre {topico}."""),
+Gere o JSON com exatamente {quantidade} questões sobre {topico} em {componente}."""),
 ])
 
 # ---------------------------------------------------------------------------
@@ -137,10 +151,16 @@ Gere o JSON com exatamente {quantidade} questões sobre {topico}."""),
 # ---------------------------------------------------------------------------
 
 _VALIDATION_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """Você é especialista em Educação Básica. Verifique e corrija cada questão:
-1. Resposta matematicamente/conceitualmente correta?
-2. Conteúdo dentro do escopo do ano?
+    ("system", """Você é especialista em Educação Básica. Verifique e corrija cada questão seguindo estas regras:
 
+1. A resposta está conceitualmente/matematicamente correta?
+2. O conteúdo está dentro do escopo do ano?
+3. ⚠️ A questão é REALMENTE sobre o tópico da disciplina informada — não é uma questão de Matemática disfarçada de outro tema?
+   - Se a disciplina for Ciências, Biologia, Geografia, História, Língua Portuguesa, Arte etc.,
+     e a questão pedir apenas um cálculo numérico (porcentagem, razão, multiplicação) sem exigir
+     conhecimento da disciplina, isso é um ERRO. Corrija substituindo por uma questão conceitual real.
+
+Tópico: {topico} | Disciplina: {componente} | Ano: {ano}
 Escopo: {escopo_curricular}
 
 Retorne o MESMO JSON, adicionando em cada questão:
@@ -392,6 +412,9 @@ def generate_activities(
     val_llm = get_llm(temperature=0.1)
     val_chain = _VALIDATION_PROMPT | val_llm
     val_response = val_chain.invoke({
+        "topico": topico,
+        "componente": componente,
+        "ano": ano_escolar,
         "escopo_curricular": escopo_curto,
         "atividades_json": json.dumps(data, ensure_ascii=False, separators=(",", ":")),
     })
