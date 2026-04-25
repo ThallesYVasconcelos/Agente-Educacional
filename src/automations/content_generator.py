@@ -19,10 +19,18 @@ Output:
   - habilidades BNCC contempladas
 """
 
+import re
 import time
 from typing import Optional
 
 from langchain_core.prompts import ChatPromptTemplate
+
+
+def _strip_code_fences(text: str) -> str:
+    """Remove blocos ```markdown``` ou ``` que LLMs às vezes inserem no output."""
+    text = re.sub(r"```[a-zA-Z]*\n?", "", text)
+    text = re.sub(r"```", "", text)
+    return text.strip()
 
 from src.rag.vectorstore import similarity_search
 from src.utils.helpers import get_llm
@@ -309,7 +317,7 @@ def generate_class_content(
         "escopo_curricular": escopo,
         "context": context,
     })
-    content_text: str = response.content
+    content_text: str = _strip_code_fences(response.content)
 
     # Valida seções obrigatórias
     required = [

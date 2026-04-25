@@ -18,6 +18,7 @@ Critério de sucesso:
   - Gerado em < 60 segundos
 """
 
+import re
 import time
 from typing import Optional
 
@@ -26,6 +27,13 @@ from langchain_core.prompts import ChatPromptTemplate
 from src.rag.vectorstore import similarity_search
 from src.utils.helpers import get_llm
 from src.utils.logger import get_logger
+
+
+def _strip_code_fences(text: str) -> str:
+    """Remove blocos ```markdown``` ou ``` que LLMs às vezes inserem no output."""
+    text = re.sub(r"```[a-zA-Z]*\n?", "", text)
+    text = re.sub(r"```", "", text)
+    return text.strip()
 
 logger = get_logger(__name__)
 
@@ -102,7 +110,7 @@ def generate_lesson_plan(
         "duracao": duracao_aulas,
         "context": context,
     })
-    plan_text: str = response.content
+    plan_text: str = _strip_code_fences(response.content)
 
     citations = sum(1 for ref in ["BNCC", "PCN", "PNLD", "Diretrizes"] if ref in plan_text)
     sections_present = [s for s in REQUIRED_SECTIONS if s in plan_text]

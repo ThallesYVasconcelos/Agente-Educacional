@@ -12,6 +12,7 @@ import streamlit as st
 from src.automations.lesson_plan import generate_lesson_plan
 from src.automations.content_generator import generate_class_content, CURRICULUM_SCOPE
 from src.utils.pdf_export import markdown_to_pdf
+from src.utils.topic_validator import check_topic_discipline, detect_discipline_with_llm
 
 st.set_page_config(page_title="Plano de Aula", page_icon="📝", layout="wide")
 
@@ -223,12 +224,95 @@ with tab1:
         )
 
     st.markdown("")
-    if st.button("✨ Criar plano de aula", type="primary", use_container_width=True):
+
+    # ---- Estado de sessão para validação ----
+    if "plano_componente_confirmado" not in st.session_state:
+        st.session_state.plano_componente_confirmado = None
+    if "plano_sugestao_disc" not in st.session_state:
+        st.session_state.plano_sugestao_disc = None
+
+    col_btn1, col_btn2 = st.columns([2, 1])
+    with col_btn1:
+        gerar_plano = st.button("✨ Criar plano de aula", type="primary", use_container_width=True)
+    with col_btn2:
+        detectar_disc = st.button(
+            "🔍 Detectar disciplina pelo tema",
+            use_container_width=True,
+            help="O assistente analisa o tema digitado e sugere a disciplina correta com as habilidades BNCC.",
+        )
+
+    # ---- Botão: detectar disciplina via LLM ----
+    if detectar_disc:
+        if not habilidade.strip():
+            st.warning("Digite o tema primeiro.")
+        else:
+            with st.spinner("Identificando disciplina e habilidades BNCC para este tema..."):
+                sugestao = detect_discipline_with_llm(habilidade, ano)
+            if sugestao["disciplina"]:
+                st.session_state.plano_sugestao_disc = sugestao
+            else:
+                st.warning("Não foi possível identificar a disciplina automaticamente.")
+
+    # ---- Exibe sugestão do LLM ----
+    if st.session_state.plano_sugestao_disc:
+        sug = st.session_state.plano_sugestao_disc
+        if sug["disciplina"] and sug["disciplina"] != componente:
+            st.markdown(
+                f"""
+                <div style="background:#FFF4DA;border-left:4px solid #C08A00;border-radius:10px;
+                            padding:1rem 1.2rem;margin:0.8rem 0;">
+                    <strong>💡 Sugestão do assistente:</strong><br>
+                    O tema <em>"{habilidade}"</em> parece pertencer a
+                    <strong>{sug['disciplina']}</strong>
+                    {f'— {sug["justificativa"]}' if sug.get('justificativa') else ''}.<br>
+                    {f'<span style="font-size:0.9rem;color:#5A6378;">Habilidades BNCC sugeridas: <strong>{", ".join(sug["habilidades"])}</strong></span>' if sug.get('habilidades') else ''}
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            col_a, col_b = st.columns(2)
+            with col_a:
+                if st.button(
+                    f"✅ Usar disciplina sugerida: {sug['disciplina']}",
+                    use_container_width=True,
+                ):
+                    st.session_state.plano_componente_confirmado = sug["disciplina"]
+                    st.session_state.plano_sugestao_disc = None
+                    st.rerun()
+            with col_b:
+                if st.button("Manter minha seleção e gerar assim mesmo", use_container_width=True):
+                    st.session_state.plano_sugestao_disc = None
+                    st.session_state.plano_componente_confirmado = componente
+                    st.rerun()
+        else:
+            st.success(
+                f"✓ Disciplina confirmada: **{sug['disciplina']}** "
+                f"{'— ' + sug['justificativa'] if sug.get('justificativa') else ''}"
+            )
+            st.session_state.plano_sugestao_disc = None
+
+    # ---- Botão: gerar plano ----
+    if gerar_plano:
         if not habilidade.strip():
             st.warning("Informe o tema ou a habilidade que deseja trabalhar.")
         else:
-            with st.spinner("Criando seu plano de aula com base nos documentos do MEC..."):
-                result = generate_lesson_plan(componente, habilidade, ano, duracao)
+            # Validação rápida A — palavras-chave locais
+            comp_efetivo = st.session_state.plano_componente_confirmado or componente
+            st.session_state.plano_componente_confirmado = None  # reset
+
+            if comp_efetivo == componente:  # só valida se não foi confirmado manualmente
+                val = check_topic_discipline(habilidade, componente)
+                if not val["ok"] and val["confidence"] == "high":
+                    st.warning(
+                        f"⚠️ {val['message']}\n\n"
+                        f"Clique em **'Detectar disciplina pelo tema'** para que o assistente "
+                        f"identifique a disciplina correta, ou gere assim mesmo se for intencional "
+                        f"(ex.: interdisciplinaridade)."
+                    )
+                    st.stop()
+
+            with st.spinner(f"Criando plano de {comp_efetivo} — {habilidade}..."):
+                result = generate_lesson_plan(comp_efetivo, habilidade, ano, duracao)
 
             if result["success"]:
                 st.success("Plano criado com sucesso! Confira abaixo e baixe se quiser.")
@@ -242,10 +326,10 @@ with tab1:
             st.markdown(result["lesson_plan"])
             st.markdown("---")
 
-            nome_base = f"plano_{componente.lower().replace(' ', '_')}"
+            nome_base = f"plano_{comp_efetivo.lower().replace(' ', '_')}"
             col_pdf, col_md, _ = st.columns([1, 1, 1])
             with col_pdf:
-                titulo_pdf = f"Plano de Aula — {componente} ({ano})"
+                titulo_pdf = f"Plano de Aula — {comp_efetivo} ({ano})"
                 pdf_bytes = markdown_to_pdf(result["lesson_plan"], titulo_pdf)
                 st.download_button(
                     "⬇️ Baixar PDF",
@@ -336,15 +420,94 @@ with tab2:
         )
 
     st.markdown("")
-    if st.button("✨ Gerar conteúdo da aula", type="primary", use_container_width=True):
+
+    if "content_comp_confirmado" not in st.session_state:
+        st.session_state.content_comp_confirmado = None
+    if "content_sugestao_disc" not in st.session_state:
+        st.session_state.content_sugestao_disc = None
+
+    col_cbtn1, col_cbtn2 = st.columns([2, 1])
+    with col_cbtn1:
+        gerar_content = st.button(
+            "✨ Gerar conteúdo da aula", type="primary",
+            use_container_width=True, key="btn_gerar_content",
+        )
+    with col_cbtn2:
+        detectar_disc_c = st.button(
+            "🔍 Detectar disciplina",
+            use_container_width=True,
+            key="btn_detectar_content",
+            help="Analisa o tópico e sugere a disciplina correta com as habilidades BNCC.",
+        )
+
+    if detectar_disc_c:
+        if not topico.strip():
+            st.warning("Digite o tópico primeiro.")
+        else:
+            with st.spinner("Identificando disciplina e habilidades BNCC..."):
+                sugestao_c = detect_discipline_with_llm(topico, ano_content)
+            if sugestao_c["disciplina"]:
+                st.session_state.content_sugestao_disc = sugestao_c
+            else:
+                st.warning("Não foi possível identificar a disciplina automaticamente.")
+
+    if st.session_state.content_sugestao_disc:
+        sug_c = st.session_state.content_sugestao_disc
+        if sug_c["disciplina"] and sug_c["disciplina"] != componente_content:
+            st.markdown(
+                f"""
+                <div style="background:#FFF4DA;border-left:4px solid #C08A00;border-radius:10px;
+                            padding:1rem 1.2rem;margin:0.8rem 0;">
+                    <strong>💡 Sugestão:</strong> O tópico <em>"{topico}"</em> parece ser de
+                    <strong>{sug_c['disciplina']}</strong>
+                    {f'— {sug_c["justificativa"]}' if sug_c.get('justificativa') else ''}.<br>
+                    {f'<span style="font-size:0.9rem;color:#5A6378;">Habilidades BNCC: <strong>{", ".join(sug_c["habilidades"])}</strong></span>' if sug_c.get('habilidades') else ''}
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            col_ca, col_cb = st.columns(2)
+            with col_ca:
+                if st.button(
+                    f"✅ Usar: {sug_c['disciplina']}",
+                    use_container_width=True, key="confirmar_disc_c",
+                ):
+                    st.session_state.content_comp_confirmado = sug_c["disciplina"]
+                    st.session_state.content_sugestao_disc = None
+                    st.rerun()
+            with col_cb:
+                if st.button(
+                    "Manter minha seleção",
+                    use_container_width=True, key="manter_disc_c",
+                ):
+                    st.session_state.content_sugestao_disc = None
+                    st.session_state.content_comp_confirmado = componente_content
+                    st.rerun()
+        else:
+            st.success(f"✓ Disciplina confirmada: **{sug_c['disciplina']}**")
+            st.session_state.content_sugestao_disc = None
+
+    if gerar_content:
         if not topico.strip():
             st.warning("Informe o tópico que deseja trabalhar.")
         else:
+            comp_c_efetivo = st.session_state.content_comp_confirmado or componente_content
+            st.session_state.content_comp_confirmado = None
+
+            if comp_c_efetivo == componente_content:
+                val_c = check_topic_discipline(topico, componente_content)
+                if not val_c["ok"] and val_c["confidence"] == "high":
+                    st.warning(
+                        f"⚠️ {val_c['message']}\n\n"
+                        f"Clique em **'Detectar disciplina'** para identificar a disciplina correta "
+                        f"ou gere assim mesmo se for intencional."
+                    )
+                    st.stop()
+
             with st.spinner(
-                f"Gerando conteúdo de '{topico}' para o {ano_content} "
-                "respeitando o escopo curricular..."
+                f"Gerando conteúdo de '{topico}' ({comp_c_efetivo} — {ano_content})..."
             ):
-                result = generate_class_content(topico, componente_content, ano_content)
+                result = generate_class_content(topico, comp_c_efetivo, ano_content)
 
             if result["success"]:
                 st.success("Conteúdo gerado com sucesso! Dentro do escopo curricular do ano.")

@@ -241,6 +241,18 @@ _RULE_RE = re.compile(r"^\s*[-*_]{3,}\s*$")
 _BQ_RE = re.compile(r"^>\s?(.*)")
 
 
+def _clean_llm_output(text: str) -> str:
+    """
+    Remove artefatos que LLMs às vezes inserem no output:
+    - Blocos de código ```markdown ... ``` ou ``` ... ```
+    - Linhas que são só backticks
+    """
+    # Remove blocos ```markdown ... ``` ou ```qualquer_coisa ... ```
+    text = re.sub(r"```[a-zA-Z]*\n?", "", text)
+    text = re.sub(r"```", "", text)
+    return text.strip()
+
+
 def markdown_to_pdf(markdown_text: str, title: str = "Documento") -> bytes:
     """
     Converte texto Markdown para bytes de PDF.
@@ -252,7 +264,10 @@ def markdown_to_pdf(markdown_text: str, title: str = "Documento") -> bytes:
     - - bullet / 1. numerado → listas
     - > blockquote → destaque com borda
     - --- → divisor
+    - Remove artefatos de LLM (```markdown, ``` soltos)
     """
+    markdown_text = _clean_llm_output(markdown_text)
+
     pdf = _EduPDF(doc_title=title)
     pdf.add_page()
     pdf.doc_title(title)
