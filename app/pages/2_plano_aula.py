@@ -10,7 +10,7 @@ if str(_root) not in sys.path:
 import streamlit as st
 
 from src.automations.lesson_plan import generate_lesson_plan
-from src.automations.bncc_checker import check_bncc_alignment
+from src.automations.content_generator import generate_class_content, CURRICULUM_SCOPE
 
 st.set_page_config(page_title="Plano de Aula", page_icon="📝", layout="wide")
 
@@ -189,7 +189,7 @@ def render_sources(sources, expander_label):
             )
 
 
-tab1, tab2 = st.tabs(["📋  Criar Plano de Aula", "🔍  Verificar Habilidades da BNCC"])
+tab1, tab2 = st.tabs(["📋  Criar Plano de Aula", "📖  Conteúdo da Aula"])
 
 # ---------------------------------------------------------------------------
 # Aba 1 — Gerador de Plano de Aula
@@ -257,93 +257,109 @@ with tab1:
             )
 
 # ---------------------------------------------------------------------------
-# Aba 2 — Verificador de Habilidades BNCC
+# Aba 2 — Gerador de Conteúdo de Aula com Escopo Curricular
 # ---------------------------------------------------------------------------
 
 with tab2:
     st.markdown(
-        "Descreva uma atividade e descubra **quais habilidades da BNCC** "
-        "ela desenvolve, com explicação para cada uma."
+        "Informe o **tópico** que deseja ensinar e o **ano escolar** — "
+        "o assistente gera o conteúdo completo da aula respeitando "
+        "**exatamente o que é previsto para aquela série** conforme BNCC e PCN. "
+        "Nada além, nada aquém."
+    )
+
+    # Aviso explicativo
+    st.markdown(
+        """
+        <div style="background:#EEF1FF;border-left:4px solid #2E5BFF;border-radius:8px;
+                    padding:0.9rem 1.1rem;margin:0.5rem 0 1.2rem 0;font-size:0.93rem;color:#1A1F36;">
+            <strong>Como funciona o controle de escopo?</strong><br>
+            O sistema conhece a progressão curricular de cada série. Por exemplo:<br>
+            • <em>Potenciação no 6º ano</em> → apenas números naturais e propriedades básicas.<br>
+            • <em>Potenciação no 7º ano</em> → inclui expoentes inteiros negativos (introdução).<br>
+            • <em>Potenciação no 8º ano</em> → expoentes fracionários e relação com radiciação.<br>
+            O conteúdo gerado sempre indica o que <strong>não trabalhar</strong> naquele ano.
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     col1, col2 = st.columns(2, gap="large")
 
     with col1:
-        componente_check = st.selectbox(
-            "📚 Disciplina", COMPONENTES, key="check_componente"
+        componente_content = st.selectbox(
+            "📚 Disciplina", COMPONENTES, key="content_componente"
         )
-        ano_check = st.selectbox(
-            "🎓 Ano escolar", ANOS_ESCOLARES, key="check_ano"
+        ano_content = st.selectbox(
+            "🎓 Ano escolar", ANOS_ESCOLARES, key="content_ano"
         )
 
+        # Mostra o escopo curricular mapeado para o ano selecionado
+        escopo_preview = (
+            CURRICULUM_SCOPE
+            .get(componente_content, {})
+            .get(ano_content, "")
+        )
+        if escopo_preview:
+            with st.expander("👁 Ver o que está previsto para este ano (escopo curricular)"):
+                st.markdown(
+                    f"<div style='font-size:0.88rem;color:#3A4055;line-height:1.6'>{escopo_preview}</div>",
+                    unsafe_allow_html=True,
+                )
+
     with col2:
-        descricao = st.text_area(
-            "📝 Descreva a atividade",
+        topico = st.text_area(
+            "🎯 Tópico / Conteúdo da aula",
             placeholder=(
-                "Exemplo: Os alunos vão ouvir a leitura de um conto, "
-                "depois desenhar a sequência de eventos e recontar a história "
-                "em voz alta para os colegas."
+                "Exemplos:\n"
+                "• Potenciação (Matemática — 6º ano)\n"
+                "• Estrutura da célula (Ciências — 6º ano)\n"
+                "• Gênero textual: crônica (Língua Portuguesa — 7º ano)\n"
+                "• Roma Antiga (História — 6º ano)\n"
+                "• Cartografia e coordenadas geográficas (Geografia — 6º ano)"
             ),
-            height=180,
-            key="check_descricao",
+            height=200,
+            key="content_topico",
         )
 
     st.markdown("")
-    if st.button("🔎 Verificar habilidades", type="primary", use_container_width=True):
-        if not descricao.strip():
-            st.warning("Descreva a atividade para verificar o alinhamento.")
+    if st.button("✨ Gerar conteúdo da aula", type="primary", use_container_width=True):
+        if not topico.strip():
+            st.warning("Informe o tópico que deseja trabalhar.")
         else:
-            with st.spinner("Buscando as habilidades da BNCC relacionadas..."):
-                result = check_bncc_alignment(descricao, componente_check, ano_check)
+            with st.spinner(
+                f"Gerando conteúdo de '{topico}' para o {ano_content} "
+                "respeitando o escopo curricular..."
+            ):
+                result = generate_class_content(topico, componente_content, ano_content)
 
-            alinhamento = result.get("alinhamento", "baixo")
-            if alinhamento == "alto":
-                st.markdown(
-                    '<div class="alignment-card alignment-high">'
-                    '<strong>✓ Alto alinhamento</strong> com a BNCC. '
-                    'A atividade desenvolve habilidades importantes do currículo.'
-                    '</div>',
-                    unsafe_allow_html=True,
-                )
-            elif alinhamento == "médio":
-                st.markdown(
-                    '<div class="alignment-card alignment-mid">'
-                    '<strong>⚠ Alinhamento médio</strong>. '
-                    'A atividade contempla parte das habilidades — vale enriquecê-la.'
-                    '</div>',
-                    unsafe_allow_html=True,
-                )
+            if result["success"]:
+                st.success("Conteúdo gerado com sucesso! Dentro do escopo curricular do ano.")
             else:
-                st.markdown(
-                    '<div class="alignment-card alignment-low">'
-                    '<strong>! Alinhamento baixo</strong>. '
-                    'Considere ajustar a atividade para contemplar habilidades da BNCC.'
-                    '</div>',
-                    unsafe_allow_html=True,
+                st.info(
+                    "Conteúdo gerado. Revise se está adequado ao nível da turma "
+                    "antes de usar em sala."
                 )
 
-            habilidades = result.get("habilidades", [])
-            if habilidades:
-                st.markdown(f"### 🎯 {len(habilidades)} habilidade(s) identificada(s)")
-                for h in habilidades:
-                    with st.expander(
-                        f"**{h.get('codigo', '?')}** — {h.get('descricao', '')}"
-                    ):
-                        st.markdown("**Por que esta atividade desenvolve essa habilidade:**")
-                        st.markdown(h.get("justificativa", ""))
-            else:
-                st.info("Não foram identificadas habilidades BNCC específicas para esta atividade.")
+            st.markdown("---")
+            st.markdown(result["content"])
+            st.markdown("---")
 
-            competencias = result.get("competencias_gerais", [])
-            if competencias:
-                st.markdown("### 🌟 Competências Gerais relacionadas")
-                for c in competencias:
-                    st.markdown(f"- {c}")
-
-            if obs := result.get("observacoes"):
-                st.info(obs)
+            col_dl, _ = st.columns([1, 2])
+            with col_dl:
+                nome_arquivo = (
+                    f"conteudo_{topico[:30].lower().replace(' ', '_')}"
+                    f"_{ano_content[:6].replace('º', '').replace(' ', '')}.md"
+                )
+                st.download_button(
+                    "⬇️ Baixar conteúdo (.md)",
+                    data=result["content"],
+                    file_name=nome_arquivo,
+                    mime="text/markdown",
+                    use_container_width=True,
+                )
 
             render_sources(
                 result.get("sources", []),
-                "📄 Ver trechos dos documentos consultados",
+                "📄 Ver trechos dos documentos curriculares consultados",
             )
