@@ -19,17 +19,62 @@ from typing import Optional
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from src.automations.content_generator import (
-    CURRICULUM_SCOPE,
-    _DEFAULT_SCOPE,
-    _fix_latex,
-    _strip_code_fences,
-)
 from src.rag.vectorstore import similarity_search
 from src.utils.helpers import get_llm
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Utilitários de texto (espelhados de content_generator para evitar
+# importação de símbolos privados que causam ImportError no deploy)
+# ---------------------------------------------------------------------------
+
+def _strip_code_fences(text: str) -> str:
+    """Remove blocos ```markdown``` ou ``` que LLMs às vezes inserem no output."""
+    text = re.sub(r"```[a-zA-Z]*\n?", "", text)
+    text = re.sub(r"```", "", text)
+    return text.strip()
+
+
+def _latex_to_text(expr: str) -> str:
+    expr = expr.strip()
+    expr = expr.replace(r"\times", "×").replace(r"\div", "÷")
+    expr = expr.replace(r"\cdot", "×").replace(r"\sqrt", "√")
+    expr = expr.replace(r"\neq", "≠").replace(r"\leq", "≤").replace(r"\geq", "≥")
+    expr = expr.replace(r"\pm", "±").replace(r"\frac", "/")
+    sup_map = {"0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+               "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+               "n": "ⁿ", "m": "ᵐ"}
+    def _replace_pow(m: re.Match) -> str:
+        sup = "".join(sup_map.get(c, c) for c in m.group(2).strip("{}"))
+        return f"{m.group(1)}{sup}"
+    expr = re.sub(r"([a-zA-Z0-9])\^\{?([^}^\s]+)\}?", _replace_pow, expr)
+    expr = expr.replace("{", "").replace("}", "")
+    expr = re.sub(r"\\([a-zA-Z]+)", r"\1", expr)
+    return expr
+
+
+def _fix_latex(text: str) -> str:
+    """Converte notação LaTeX residual em texto legível."""
+    text = re.sub(r"\\\((.+?)\\\)", lambda m: _latex_to_text(m.group(1)), text)
+    text = re.sub(r"\$(.+?)\$", lambda m: _latex_to_text(m.group(1)), text)
+    text = re.sub(r"\\\[(.+?)\\\]", lambda m: _latex_to_text(m.group(1)), text, flags=re.DOTALL)
+    return text
+
+
+# ---------------------------------------------------------------------------
+# Escopo curricular (importado do módulo público)
+# ---------------------------------------------------------------------------
+
+from src.automations.content_generator import CURRICULUM_SCOPE  # noqa: E402
+
+_DEFAULT_SCOPE = (
+    "Siga rigorosamente a progressão curricular da BNCC e PCN para o ano escolar informado. "
+    "Use apenas conceitos e complexidade adequados à série. "
+    "Não antecipe conteúdos de anos superiores."
+)
 
 # ---------------------------------------------------------------------------
 # Tipos de atividade disponíveis
