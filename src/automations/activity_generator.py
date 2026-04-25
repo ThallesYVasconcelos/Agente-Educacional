@@ -77,6 +77,93 @@ _DEFAULT_SCOPE = (
 )
 
 # ---------------------------------------------------------------------------
+# Classificação de disciplinas por natureza pedagógica
+# ---------------------------------------------------------------------------
+
+# Disciplinas onde cálculo numérico é o objeto central das questões
+_DISCIPLINAS_EXATAS = {"Matemática", "Física", "Química"}
+
+# Disciplinas onde questões devem ser conceituais/analíticas (sem cálculo numérico)
+_DISCIPLINAS_CONCEITUAIS = {
+    "Ciências", "Biologia", "Língua Portuguesa", "Literatura",
+    "História", "Geografia", "Arte", "Educação Física",
+    "Ensino Religioso", "Filosofia", "Sociologia",
+    "Língua Estrangeira (Inglês)", "Língua Estrangeira (Espanhol)",
+    "Língua Estrangeira", "Inglês", "Espanhol",
+    "Ciências da Natureza", "Ciências Humanas",
+}
+
+# Escopos-padrão para disciplinas sem entrada no CURRICULUM_SCOPE
+_SCOPE_DEFAULTS: dict[str, str] = {
+    "Arte": (
+        "Explore elementos da linguagem artística (linha, forma, cor, textura, volume, espaço) "
+        "e manifestações culturais e artísticas regionais e universais. "
+        "Questões devem envolver análise, identificação e contextualização de obras e movimentos artísticos, "
+        "adequados ao ano escolar informado. Habilidades BNCC: EF01-09AR / EM13LGG."
+    ),
+    "Educação Física": (
+        "Aborde práticas corporais, esportes, jogos, danças, lutas e ginásticas "
+        "conforme o ano escolar informado. "
+        "Questões devem envolver conceitos, regras, valores e reflexão crítica sobre as práticas corporais. "
+        "Habilidades BNCC: EF01-09EF / EM13LGG."
+    ),
+    "Ensino Religioso": (
+        "Aborde diversidade religiosa, tradições, práticas de espiritualidade e respeito "
+        "à pluralidade de crenças no contexto brasileiro, conforme o ano escolar informado. "
+        "Questões devem ser reflexivas e respeitosas. Habilidades BNCC: EF01-09ER."
+    ),
+    "Filosofia": (
+        "Aborde conceitos filosóficos, pensadores, correntes do pensamento e ética, "
+        "adequados ao Ensino Médio. Questões devem estimular argumentação e reflexão crítica. "
+        "Habilidades BNCC: EM13CNT / EM13CHS."
+    ),
+    "Sociologia": (
+        "Aborde conceitos sociológicos, fenômenos sociais, cultura, desigualdades, "
+        "cidadania e democracia, adequados ao Ensino Médio. "
+        "Questões devem estimular análise crítica da realidade social. "
+        "Habilidades BNCC: EM13CHS."
+    ),
+    "Língua Estrangeira (Inglês)": (
+        "Aborde vocabulário, gramática, compreensão de texto e produção escrita em inglês, "
+        "adequados ao ano escolar informado. Questões podem ser em português com trechos em inglês. "
+        "Habilidades BNCC: EF06-09LI / EM13LGG."
+    ),
+    "Língua Estrangeira (Espanhol)": (
+        "Aborde vocabulário, gramática, compreensão de texto e produção escrita em espanhol, "
+        "adequados ao ano escolar informado. Habilidades BNCC: EF06-09LE / EM13LGG."
+    ),
+    "Física": (
+        "Trabalhe conceitos, leis e fenômenos físicos com cálculos adequados ao Ensino Médio. "
+        "Habilidades BNCC: EM13CNT."
+    ),
+    "Química": (
+        "Trabalhe conceitos, reações e cálculos químicos adequados ao Ensino Médio. "
+        "Habilidades BNCC: EM13CNT."
+    ),
+    "Biologia": (
+        "Trabalhe conceitos e processos biológicos adequados ao Ensino Médio: célula, genética, "
+        "evolução, ecologia, fisiologia. Questões devem ser conceituais e analíticas. "
+        "Habilidades BNCC: EM13CNT."
+    ),
+}
+
+
+def _classify_discipline(componente: str) -> str:
+    """Retorna 'exata' ou 'conceitual' para a disciplina informada."""
+    if componente in _DISCIPLINAS_EXATAS:
+        return "exata"
+    return "conceitual"
+
+
+def _get_scope(componente: str, ano: str) -> str:
+    """Retorna o escopo curricular para a disciplina e ano, com fallback."""
+    scope = CURRICULUM_SCOPE.get(componente, {}).get(ano, "")
+    if not scope:
+        scope = _SCOPE_DEFAULTS.get(componente, _DEFAULT_SCOPE)
+    return scope
+
+
+# ---------------------------------------------------------------------------
 # Tipos de atividade disponíveis
 # ---------------------------------------------------------------------------
 
@@ -95,55 +182,35 @@ _GENERATION_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """Você é professor especialista em Educação Básica brasileira.
 Gere atividades pedagógicas DIRETAMENTE sobre o tópico informado.
 
-⚠️ REGRA PRINCIPAL: TODAS as questões devem ser EXPLICITAMENTE sobre "{topico}" na disciplina "{componente}".
+⚠️ REGRA ABSOLUTA: TODAS as questões devem exigir conhecimento de "{topico}" em "{componente}".
+Classificação desta disciplina: {natureza_disciplina}
 
-ATENÇÃO — ERROS COMUNS A EVITAR:
-- Para disciplinas de Ciências, Biologia, Geografia, História, Arte, Língua Portuguesa etc.,
-  NÃO gere questões de Matemática disfarçadas de outro tema.
-  Exemplo ERRADO (tópico: Ecologia básica | disciplina: Ciências):
-    "Uma floresta tem 120 árvores. Se 30% são frutíferas, quantas são frutíferas?"
-    → Isso é um problema de porcentagem (Matemática), NÃO de Ecologia.
-  Exemplo CERTO (tópico: Ecologia básica | disciplina: Ciências):
-    "O que é uma cadeia alimentar? Cite dois exemplos de produtores e consumidores."
-    "Explique a diferença entre cadeia alimentar e teia alimentar."
-    "Por que os decompositores são importantes para o equilíbrio do ecossistema?"
-
-- Para disciplinas de exatas (Matemática, Física, Química), o enunciado pode conter cálculos,
-  mas somente sobre "{topico}".
-  Exemplo ERRADO (tópico: Potenciação | disciplina: Matemática):
-    "Maria tem 3 caixas com 4 docinhos cada. Quantos docinhos no total?" → é multiplicação.
-  Exemplo CERTO (tópico: Potenciação | disciplina: Matemática):
-    "Calcule 3⁴." ou "Uma bactéria duplica a cada hora partindo de 1. Quantas após 5 horas? Expresse como potência."
-
-TIPO DE ATIVIDADE para disciplinas de Ciências Humanas e da Natureza (exceto Matemática):
-- Prefira questões dissertativas, de análise, identificação de conceitos e relacionamento de ideias.
-- Situações-problema nessas disciplinas devem exigir raciocínio científico, não cálculo numérico.
+{instrucoes_por_natureza}
 
 ESCOPO CURRICULAR ({ano} — {componente}):
 {escopo_curricular}
 
 REGRAS ADICIONAIS:
 - Respeite o escopo: não antecipe conteúdos de séries superiores.
-- Use português claro. Proibido LaTeX: use × ÷ ² ³ ⁴ ⁵ no lugar.
-- Tipo: {tipo_descricao}
+- Use português claro. Proibido LaTeX: use × ÷ ² ³ ⁴ ⁵ no lugar de notação matemática.
+- Tipo de atividade: {tipo_descricao}
 - Quantidade: {quantidade} questões
 - Gradação obrigatória: distribua entre fácil, médio e desafiador.
 
 Retorne APENAS este JSON (sem markdown, sem texto extra):
-{{"titulo":"...","disciplina":"{componente}","ano":"{ano}","topico":"{topico}","habilidades_gerais":["EM13.." ou "EF.."],"questoes":[{{"numero":1,"tipo":"dissertativa|multipla_escolha|situacao_problema|calculo","enunciado":"...","alternativas":[],"resposta_correta":"...","resolucao_passo_a_passo":"Passo 1:... Resultado:...","habilidade_bncc":"EM13.. ou EF..","nivel":"facil|medio|desafiador"}}]}}
+{{"titulo":"...","disciplina":"{componente}","ano":"{ano}","topico":"{topico}","habilidades_gerais":["EM13.." ou "EF.."],"questoes":[{{"numero":1,"tipo":"dissertativa|multipla_escolha|situacao_problema|calculo","enunciado":"...","alternativas":[],"resposta_correta":"...","resolucao_passo_a_passo":"...","habilidade_bncc":"EM13.. ou EF..","nivel":"facil|medio|desafiador"}}]}}
 
 alternativas: lista vazia [] exceto em múltipla escolha.
 """),
     ("human", """Disciplina: {componente} | Ano: {ano} | Tópico: {topico}
 Tipo: {tipo_descricao} | Questões: {quantidade}
 
-IMPORTANTE: todas as questões devem testar compreensão de "{topico}" em "{componente}".
-NÃO use cálculos matemáticos de outras áreas para contextualizar o tema.
-
 Referência curricular (BNCC/PCN):
 {context}
 
-Gere o JSON com exatamente {quantidade} questões sobre {topico} em {componente}."""),
+{lembrete_por_natureza}
+
+Gere o JSON com exatamente {quantidade} questões."""),
 ])
 
 # ---------------------------------------------------------------------------
@@ -151,14 +218,15 @@ Gere o JSON com exatamente {quantidade} questões sobre {topico} em {componente}
 # ---------------------------------------------------------------------------
 
 _VALIDATION_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """Você é especialista em Educação Básica. Verifique e corrija cada questão seguindo estas regras:
+    ("system", """Você é especialista em Educação Básica. Verifique cada questão:
 
-1. A resposta está conceitualmente/matematicamente correta?
-2. O conteúdo está dentro do escopo do ano?
-3. ⚠️ A questão é REALMENTE sobre o tópico da disciplina informada — não é uma questão de Matemática disfarçada de outro tema?
-   - Se a disciplina for Ciências, Biologia, Geografia, História, Língua Portuguesa, Arte etc.,
-     e a questão pedir apenas um cálculo numérico (porcentagem, razão, multiplicação) sem exigir
-     conhecimento da disciplina, isso é um ERRO. Corrija substituindo por uma questão conceitual real.
+1. A resposta está correta (conceitual ou matematicamente)?
+2. Está dentro do escopo do ano?
+3. ⚠️ A questão exige realmente conhecimento de "{topico}" em "{componente}"?
+
+Classificação desta disciplina: {natureza_disciplina}
+
+{instrucoes_validacao_por_natureza}
 
 Tópico: {topico} | Disciplina: {componente} | Ano: {ano}
 Escopo: {escopo_curricular}
@@ -294,17 +362,59 @@ def generate_activities(
     """
     start = time.time()
 
-    escopo = (
-        CURRICULUM_SCOPE
-        .get(componente, {})
-        .get(ano_escolar, _DEFAULT_SCOPE)
-    )
-
+    # ── Escopo e classificação de disciplina ──────────────────────────────
+    escopo = _get_scope(componente, ano_escolar)
     tipo_descricao = ACTIVITY_TYPES.get(tipo, ACTIVITY_TYPES["misto"])
+    natureza = _classify_discipline(componente)
 
-    # Busca trechos de documentos curriculares relevantes
-    query_hab = f"habilidades BNCC {componente} {topico} {ano_escolar} EF"
-    query_ped = f"{topico} {componente} {ano_escolar} atividades exercícios"
+    if natureza == "exata":
+        natureza_label = "EXATA (Matemática / Física / Química) — cálculos e resolução numérica são esperados"
+        instrucoes_por_natureza = (
+            f"REGRAS para disciplinas EXATAS:\n"
+            f"- As questões devem envolver cálculos, fórmulas e resolução numérica de '{topico}'.\n"
+            f"- Cada questão deve testar diretamente '{topico}', não outro conteúdo matemático.\n"
+            f"- Exemplo ERRADO (tópico: Potenciação): 'Maria tem 3 caixas com 4 docinhos. Quantos docinhos?' → isso é multiplicação.\n"
+            f"- Exemplo CERTO (tópico: Potenciação): 'Calcule 3⁴.' ou 'Uma bactéria duplica por hora. Partindo de 1, quantas após 5h? Escreva como potência.'"
+        )
+        instrucoes_validacao = (
+            "Para disciplinas EXATAS: verifique se os cálculos e resultados estão corretos.\n"
+            "Verifique se a questão realmente testa o TÓPICO informado, não outro conteúdo matemático."
+        )
+        lembrete = f"Gere questões com cálculo e resolução numérica explícita de '{topico}'."
+    else:
+        natureza_label = "CONCEITUAL (Ciências / Humanas / Linguagens / Arte / Outras) — questões conceituais, analíticas e reflexivas"
+        instrucoes_por_natureza = (
+            f"REGRAS para disciplinas CONCEITUAIS:\n"
+            f"- As questões DEVEM exigir conhecimento específico de '{topico}' em '{componente}'.\n"
+            f"- PROIBIDO: questões que sejam apenas cálculos numéricos (porcentagem, razão, multiplicação)\n"
+            f"  disfarçados com o tema da disciplina. Isso é Matemática, não {componente}.\n"
+            f"- PERMITIDO: questões de identificação, definição, análise, comparação, exemplificação,\n"
+            f"  interpretação, produção de texto, múltipla escolha conceitual, situação-problema que\n"
+            f"  exija raciocínio próprio da disciplina.\n\n"
+            f"Exemplos por disciplina:\n"
+            f"  Ciências/Biologia — 'O que é uma cadeia alimentar? Cite produtores e consumidores.'\n"
+            f"  História — 'Quais foram as principais causas da Revolução Francesa?'\n"
+            f"  Geografia — 'Explique o que é urbanização e cite dois impactos sociais.'\n"
+            f"  Língua Portuguesa — 'Identifique o tema e a tese no texto abaixo.'\n"
+            f"  Arte — 'Cite três características do movimento impressionista.'\n"
+            f"  Filosofia — 'O que Platão entendia por justiça? Relacione com a República.'\n"
+            f"  Inglês — 'Complete com o tempo verbal correto: She ___ (go) to school every day.'"
+        )
+        instrucoes_validacao = (
+            f"Para disciplinas CONCEITUAIS: REJEITE qualquer questão que seja apenas um cálculo numérico\n"
+            f"(porcentagem, razão, multiplicação, etc.) sem exigir conhecimento real de '{topico}' em '{componente}'.\n"
+            f"Substitua tais questões por perguntas conceituais, analíticas ou de múltipla escolha sobre o tema.\n"
+            f"Exemplo de questão INVÁLIDA para Ecologia: 'Uma floresta tem 120 árvores. Se 30% são frutíferas, quantas são?'\n"
+            f"→ Substitua por: 'O que é um ecossistema? Cite dois exemplos de relações ecológicas.'"
+        )
+        lembrete = (
+            f"ATENÇÃO: Não gere cálculos numéricos de Matemática com '{topico}' como contexto.\n"
+            f"Gere questões que testem conhecimento real de '{topico}' em '{componente}'."
+        )
+
+    # ── Busca trechos de documentos curriculares relevantes ───────────────
+    query_hab = f"habilidades BNCC {componente} {topico} {ano_escolar}"
+    query_ped = f"{topico} {componente} {ano_escolar} atividades"
     docs_hab = similarity_search(query_hab, k=4)
     docs_ped = similarity_search(query_ped, k=3)
 
@@ -325,7 +435,6 @@ def generate_activities(
     ]
     docs = [d for d in docs if not any(p in d.page_content for p in _SKIP_PHRASES)][:6]
 
-    # Limita contexto a 1200 chars por trecho para não exceder tokens do modelo
     context_parts = []
     for d in docs:
         snippet = d.page_content[:400]
@@ -333,10 +442,7 @@ def generate_activities(
         context_parts.append(f"[{source}] {snippet}")
     context = "\n---\n".join(context_parts) or "Use o escopo curricular como referência."
 
-    # Limita escopo a 600 chars para o prompt caber dentro do limite
     escopo_curto = escopo[:600] if len(escopo) > 600 else escopo
-
-    llm = get_llm(temperature=0.4)
 
     from src.utils.curriculum_checker import check_content
 
@@ -358,6 +464,9 @@ def generate_activities(
             "tipo_descricao": tipo_descricao,
             "quantidade": quantidade,
             "context": context,
+            "natureza_disciplina": natureza_label,
+            "instrucoes_por_natureza": instrucoes_por_natureza,
+            "lembrete_por_natureza": lembrete,
         })
 
         raw_gen = _fix_latex(_strip_code_fences(gen_response.content))
@@ -416,6 +525,8 @@ def generate_activities(
         "componente": componente,
         "ano": ano_escolar,
         "escopo_curricular": escopo_curto,
+        "natureza_disciplina": natureza_label,
+        "instrucoes_validacao_por_natureza": instrucoes_validacao,
         "atividades_json": json.dumps(data, ensure_ascii=False, separators=(",", ":")),
     })
 
