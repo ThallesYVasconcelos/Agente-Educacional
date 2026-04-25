@@ -81,7 +81,11 @@ _DEFAULT_SCOPE = (
 # ---------------------------------------------------------------------------
 
 # Disciplinas onde cálculo numérico é o objeto central das questões
-_DISCIPLINAS_EXATAS = {"Matemática", "Física", "Química"}
+_DISCIPLINAS_EXATAS = {
+    "Matemática", "Matematica",
+    "Física", "Fisica",
+    "Química", "Quimica",
+}
 
 # Disciplinas onde questões devem ser conceituais/analíticas (sem cálculo numérico)
 _DISCIPLINAS_CONCEITUAIS = {
@@ -174,43 +178,48 @@ ACTIVITY_TYPES = {
     "misto": "Misto: exercícios objetivos + situações-problema",
 }
 
+# Para disciplinas conceituais, remapear tipos para evitar que o LLM
+# interprete "situação-problema" como licença para criar cálculos numéricos.
+_ACTIVITY_TYPES_CONCEITUAL = {
+    "exercicios": "Questões objetivas conceituais (definição, identificação, exemplificação)",
+    "fixacao": "Questões dissertativas com explicação passo a passo do raciocínio",
+    "situacao": "Questões com cenário real que exijam raciocínio da disciplina (sem cálculo numérico)",
+    "misto": "Misto: múltipla escolha conceitual + questões dissertativas + análise de situações reais",
+}
+
 # ---------------------------------------------------------------------------
 # Prompt de Geração
 # ---------------------------------------------------------------------------
 
 _GENERATION_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """Você é professor especialista em Educação Básica brasileira.
-Gere atividades pedagógicas DIRETAMENTE sobre o tópico informado.
+    ("system", """\
+Você é professor especialista em Educação Básica brasileira.
+Tarefa: gerar {quantidade} questões sobre TÓPICO="{topico}" na DISCIPLINA="{componente}" para {ano}.
 
-⚠️ REGRA ABSOLUTA: TODAS as questões devem exigir conhecimento de "{topico}" em "{componente}".
-Classificação desta disciplina: {natureza_disciplina}
-
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NATUREZA DA DISCIPLINA: {natureza_disciplina}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {instrucoes_por_natureza}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ESCOPO CURRICULAR ({ano} — {componente}):
+ESCOPO CURRICULAR — {componente} — {ano}:
 {escopo_curricular}
 
-REGRAS ADICIONAIS:
-- Respeite o escopo: não antecipe conteúdos de séries superiores.
-- Use português claro. Proibido LaTeX: use × ÷ ² ³ ⁴ ⁵ no lugar de notação matemática.
-- Tipo de atividade: {tipo_descricao}
-- Quantidade: {quantidade} questões
-- Gradação obrigatória: distribua entre fácil, médio e desafiador.
-
-Retorne APENAS este JSON (sem markdown, sem texto extra):
-{{"titulo":"...","disciplina":"{componente}","ano":"{ano}","topico":"{topico}","habilidades_gerais":["EM13.." ou "EF.."],"questoes":[{{"numero":1,"tipo":"dissertativa|multipla_escolha|situacao_problema|calculo","enunciado":"...","alternativas":[],"resposta_correta":"...","resolucao_passo_a_passo":"...","habilidade_bncc":"EM13.. ou EF..","nivel":"facil|medio|desafiador"}}]}}
-
-alternativas: lista vazia [] exceto em múltipla escolha.
+FORMATO DE SAÍDA — retorne APENAS este JSON, sem markdown:
+{{"titulo":"...","disciplina":"{componente}","ano":"{ano}","topico":"{topico}","habilidades_gerais":["EF.. ou EM13.."],"questoes":[{{"numero":1,"tipo":"dissertativa|multipla_escolha|calculo","enunciado":"...","alternativas":[],"resposta_correta":"...","resolucao_passo_a_passo":"...","habilidade_bncc":"EF.. ou EM13..","nivel":"facil|medio|desafiador"}}]}}
+alternativas: lista vazia [] exceto em múltipla escolha. Distribua os níveis: fácil, médio, desafiador.\
 """),
-    ("human", """Disciplina: {componente} | Ano: {ano} | Tópico: {topico}
-Tipo: {tipo_descricao} | Questões: {quantidade}
+    ("human", """\
+DISCIPLINA: {componente} | ANO: {ano} | TÓPICO: {topico}
+Tipo de questão: {tipo_descricao} | Quantidade: {quantidade}
 
 Referência curricular (BNCC/PCN):
 {context}
 
 {lembrete_por_natureza}
 
-Gere o JSON com exatamente {quantidade} questões."""),
+GERE o JSON com {quantidade} questões EXCLUSIVAMENTE sobre "{topico}" em "{componente}".\
+"""),
 ])
 
 # ---------------------------------------------------------------------------
@@ -218,25 +227,26 @@ Gere o JSON com exatamente {quantidade} questões."""),
 # ---------------------------------------------------------------------------
 
 _VALIDATION_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """Você é especialista em Educação Básica. Verifique cada questão:
+    ("system", """\
+Você é especialista em Educação Básica. Valide cada questão do JSON recebido.
 
-1. A resposta está correta (conceitual ou matematicamente)?
-2. Está dentro do escopo do ano?
-3. ⚠️ A questão exige realmente conhecimento de "{topico}" em "{componente}"?
+TÓPICO: "{topico}" | DISCIPLINA: "{componente}" | ANO: {ano}
+NATUREZA: {natureza_disciplina}
 
-Classificação desta disciplina: {natureza_disciplina}
+CRITÉRIOS DE VALIDAÇÃO:
+1. A resposta/gabarito está correto?
+2. O conteúdo está dentro do escopo do ano?
+3. A questão exige realmente conhecimento de "{topico}" em "{componente}"?
 
 {instrucoes_validacao_por_natureza}
 
-Tópico: {topico} | Disciplina: {componente} | Ano: {ano}
-Escopo: {escopo_curricular}
+Para cada questão com problema: corrija SUBSTITUINDO o enunciado, resposta e resolução.
+Marque "validacao":"corrigido" e descreva o que mudou em "nota_validacao".
+Questões corretas: "validacao":"ok".
 
-Retorne o MESMO JSON, adicionando em cada questão:
-  "validacao": "ok" ou "corrigido"
-  "nota_validacao": "o que corrigiu" (só se corrigido)
-
-Retorne APENAS o JSON, sem markdown."""),
-    ("human", "Verifique:\n{atividades_json}"),
+Retorne o JSON COMPLETO com todas as questões (corrigidas ou não), sem markdown.\
+"""),
+    ("human", "JSON a validar:\n{atividades_json}"),
 ])
 
 
@@ -364,52 +374,50 @@ def generate_activities(
 
     # ── Escopo e classificação de disciplina ──────────────────────────────
     escopo = _get_scope(componente, ano_escolar)
-    tipo_descricao = ACTIVITY_TYPES.get(tipo, ACTIVITY_TYPES["misto"])
     natureza = _classify_discipline(componente)
 
     if natureza == "exata":
-        natureza_label = "EXATA (Matemática / Física / Química) — cálculos e resolução numérica são esperados"
+        natureza_label = "EXATA — cálculo e resolução numérica são o objeto da questão"
+        tipo_descricao = ACTIVITY_TYPES.get(tipo, ACTIVITY_TYPES["misto"])
         instrucoes_por_natureza = (
-            f"REGRAS para disciplinas EXATAS:\n"
-            f"- As questões devem envolver cálculos, fórmulas e resolução numérica de '{topico}'.\n"
-            f"- Cada questão deve testar diretamente '{topico}', não outro conteúdo matemático.\n"
-            f"- Exemplo ERRADO (tópico: Potenciação): 'Maria tem 3 caixas com 4 docinhos. Quantos docinhos?' → isso é multiplicação.\n"
-            f"- Exemplo CERTO (tópico: Potenciação): 'Calcule 3⁴.' ou 'Uma bactéria duplica por hora. Partindo de 1, quantas após 5h? Escreva como potência.'"
+            f"✅ OBRIGATÓRIO: cada questão deve conter cálculo ou resolução numérica de '{topico}'.\n"
+            f"❌ PROIBIDO: questões sobre outro conteúdo usando '{topico}' apenas como contexto.\n"
+            f"   Ex. ERRADO (tópico=Potenciação): 'Se há 3 caixas com 4 docinhos, quantos?' → é multiplicação.\n"
+            f"   Ex. CERTO  (tópico=Potenciação): 'Calcule 2⁵.' / 'Uma bactéria duplica por hora. Quantas após 4h?'"
         )
         instrucoes_validacao = (
-            "Para disciplinas EXATAS: verifique se os cálculos e resultados estão corretos.\n"
-            "Verifique se a questão realmente testa o TÓPICO informado, não outro conteúdo matemático."
+            f"EXATAS — rejeite questões que não calculem '{topico}' diretamente. "
+            f"Verifique se os resultados numéricos estão corretos."
         )
-        lembrete = f"Gere questões com cálculo e resolução numérica explícita de '{topico}'."
+        lembrete = f"Gere {quantidade} questões com cálculo explícito de '{topico}'."
     else:
-        natureza_label = "CONCEITUAL (Ciências / Humanas / Linguagens / Arte / Outras) — questões conceituais, analíticas e reflexivas"
+        natureza_label = "CONCEITUAL — perguntas sobre conceitos, análise e raciocínio da disciplina (SEM cálculo numérico)"
+        # Remapear tipo para evitar indução de cálculos numéricos
+        tipo_descricao = _ACTIVITY_TYPES_CONCEITUAL.get(tipo, _ACTIVITY_TYPES_CONCEITUAL["misto"])
         instrucoes_por_natureza = (
-            f"REGRAS para disciplinas CONCEITUAIS:\n"
-            f"- As questões DEVEM exigir conhecimento específico de '{topico}' em '{componente}'.\n"
-            f"- PROIBIDO: questões que sejam apenas cálculos numéricos (porcentagem, razão, multiplicação)\n"
-            f"  disfarçados com o tema da disciplina. Isso é Matemática, não {componente}.\n"
-            f"- PERMITIDO: questões de identificação, definição, análise, comparação, exemplificação,\n"
-            f"  interpretação, produção de texto, múltipla escolha conceitual, situação-problema que\n"
-            f"  exija raciocínio próprio da disciplina.\n\n"
-            f"Exemplos por disciplina:\n"
-            f"  Ciências/Biologia — 'O que é uma cadeia alimentar? Cite produtores e consumidores.'\n"
-            f"  História — 'Quais foram as principais causas da Revolução Francesa?'\n"
-            f"  Geografia — 'Explique o que é urbanização e cite dois impactos sociais.'\n"
-            f"  Língua Portuguesa — 'Identifique o tema e a tese no texto abaixo.'\n"
-            f"  Arte — 'Cite três características do movimento impressionista.'\n"
-            f"  Filosofia — 'O que Platão entendia por justiça? Relacione com a República.'\n"
-            f"  Inglês — 'Complete com o tempo verbal correto: She ___ (go) to school every day.'"
+            f"❌ PROIBIDO ABSOLUTO: cálculo numérico de qualquer tipo (porcentagem, subtração, razão,\n"
+            f"   contagem, medida de tempo/distância, etc.), mesmo que o enunciado mencione '{topico}'.\n"
+            f"   TESTE: se remover o tema e deixar só os números ainda faz sentido → é Matemática → INVÁLIDO.\n"
+            f"   Ex. INVÁLIDO (disc={componente}): 'Há 200 árvores. 25% são pinheiros. Quantas?' → é Matemática.\n"
+            f"   Ex. INVÁLIDO (disc={componente}): 'A lebre correu 10m e a tartaruga 2m. Quantos metros a mais?' → é Matemática.\n"
+            f"   Ex. INVÁLIDO (disc={componente}): 'Se a população cresce 10% ao ano partindo de 100, quantos em 3 anos?' → é Matemática.\n\n"
+            f"✅ OBRIGATÓRIO: questões que exijam conhecimento de '{topico}' em '{componente}'.\n"
+            f"   Formas válidas: definição, identificação, análise, comparação, interpretação, exemplificação,\n"
+            f"   múltipla escolha conceitual, questão-problema que exija raciocínio da disciplina.\n"
+            f"   Ex. VÁLIDO (tópico={topico}, disc={componente}): perguntas que um professor de {componente} faria,\n"
+            f"   não que um professor de Matemática faria."
         )
         instrucoes_validacao = (
-            f"Para disciplinas CONCEITUAIS: REJEITE qualquer questão que seja apenas um cálculo numérico\n"
-            f"(porcentagem, razão, multiplicação, etc.) sem exigir conhecimento real de '{topico}' em '{componente}'.\n"
-            f"Substitua tais questões por perguntas conceituais, analíticas ou de múltipla escolha sobre o tema.\n"
-            f"Exemplo de questão INVÁLIDA para Ecologia: 'Uma floresta tem 120 árvores. Se 30% são frutíferas, quantas são?'\n"
-            f"→ Substitua por: 'O que é um ecossistema? Cite dois exemplos de relações ecológicas.'"
+            f"CONCEITUAIS — SUBSTITUA imediatamente toda questão com cálculo numérico:\n"
+            f"   Teste: se remover o tema e só sobrar números → é Matemática → REJEITE e substitua.\n"
+            f"   Ex. INVÁLIDO: 'Em um ecossistema com 500 plantas, 50% são herbáceas. Quantas?' → SUBSTITUIR.\n"
+            f"   Ex. INVÁLIDO: 'A lebre correu 10m. A tartaruga correu 2m. Quantos metros a lebre correu a mais?' → SUBSTITUIR.\n"
+            f"   Substitua por questão conceitual real sobre '{topico}' em '{componente}'."
         )
         lembrete = (
-            f"ATENÇÃO: Não gere cálculos numéricos de Matemática com '{topico}' como contexto.\n"
-            f"Gere questões que testem conhecimento real de '{topico}' em '{componente}'."
+            f"⚠️ DISCIPLINA CONCEITUAL: PROIBIDO qualquer cálculo numérico. "
+            f"Gere {quantidade} questões CONCEITUAIS sobre '{topico}' em '{componente}'.\n"
+            f"Pergunte o que um professor de {componente} perguntaria — conceitos, análise, interpretação."
         )
 
     # ── Busca trechos de documentos curriculares relevantes ───────────────
