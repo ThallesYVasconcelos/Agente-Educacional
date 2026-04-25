@@ -129,7 +129,7 @@ class _ChatReplicate(BaseChatModel):
         input_payload: dict[str, Any] = {
             "prompt": prompt,
             "temperature": max(float(self.temperature), 0.01),
-            "max_completion_tokens": 2048,
+            "max_completion_tokens": 4096,
         }
         if system_prompt:
             input_payload["system_prompt"] = system_prompt

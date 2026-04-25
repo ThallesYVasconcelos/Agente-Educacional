@@ -210,10 +210,10 @@ with col5:
     quantidade = st.number_input(
         "Nº de questões",
         min_value=3,
-        max_value=15,
-        value=8,
+        max_value=10,
+        value=6,
         step=1,
-        help="Entre 3 e 15 questões por lista.",
+        help="Entre 3 e 10 questões por lista.",
     )
 
 # Escopo curricular do ano selecionado

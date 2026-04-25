@@ -92,57 +92,30 @@ ACTIVITY_TYPES = {
 # ---------------------------------------------------------------------------
 
 _GENERATION_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """Você é um professor especialista em elaboração de atividades pedagógicas
-para a Educação Básica brasileira. Você cria atividades precisas, claras e adequadas à faixa etária.
+    ("system", """Você é professor especialista em Educação Básica brasileira.
+Gere atividades pedagógicas precisas e adequadas à faixa etária.
 
-⚠️ ESCOPO CURRICULAR OBRIGATÓRIO para este ano e disciplina:
+ESCOPO CURRICULAR ({ano} — {componente}):
 {escopo_curricular}
 
-Respeite rigorosamente este escopo: não use conceitos de anos superiores.
+REGRAS:
+- Respeite o escopo: não antecipe conteúdos de séries superiores.
+- Use português claro. Proibido LaTeX: use × ÷ ² ³ no lugar.
+- Tipo: {tipo_descricao}
+- Quantidade: {quantidade} questões
 
-⚠️ REGRAS DE FORMATAÇÃO:
-- Escreva em português claro e acessível
-- NÃO use notação LaTeX (\\times, $...$, \\(...\\)). Use × ÷ ² ³ em vez disso.
-- Cada questão deve ter: enunciado, alternativas (se aplicável), resposta correta e habilidade BNCC
-- Numere as questões: Questão 1, Questão 2, etc.
+Retorne APENAS este JSON (sem markdown, sem texto extra):
+{{"titulo":"...","disciplina":"{componente}","ano":"{ano}","topico":"{topico}","habilidades_gerais":["EF.."],"questoes":[{{"numero":1,"tipo":"calculo|multipla_escolha|situacao_problema","enunciado":"...","alternativas":[],"resposta_correta":"...","resolucao_passo_a_passo":"Passo 1:... Resultado:...","habilidade_bncc":"EF..","nivel":"facil|medio|desafiador"}}]}}
 
-Tipo de atividade a gerar: {tipo_descricao}
-
-Quantidade: {quantidade} questões
-
-Estruture EXATAMENTE neste formato JSON (sem markdown ao redor):
-{{
-  "titulo": "Título da lista de atividades",
-  "disciplina": "{componente}",
-  "ano": "{ano}",
-  "topico": "{topico}",
-  "habilidades_gerais": ["EF06MA07", ...],
-  "questoes": [
-    {{
-      "numero": 1,
-      "tipo": "calculo" | "multipla_escolha" | "situacao_problema" | "verdadeiro_falso",
-      "enunciado": "Texto da questão para o aluno",
-      "alternativas": ["A) ...", "B) ...", "C) ...", "D) ..."],
-      "resposta_correta": "Resposta completa e explicada para o professor",
-      "resolucao_passo_a_passo": "Passo 1: ... Passo 2: ... Resultado: ...",
-      "habilidade_bncc": "EF06MA07",
-      "nivel": "facil" | "medio" | "desafiador"
-    }}
-  ]
-}}
-
-Use alternativas APENAS para questões de múltipla escolha — nos demais tipos, deixe "alternativas": [].
+alternativas: lista vazia [] exceto em múltipla escolha.
 """),
-    ("human", """Disciplina: {componente}
-Ano escolar: {ano}
-Tópico / Conteúdo: {topico}
-Tipo de atividade: {tipo_descricao}
-Quantidade de questões: {quantidade}
+    ("human", """Disciplina: {componente} | Ano: {ano} | Tópico: {topico}
+Tipo: {tipo_descricao} | Questões: {quantidade}
 
-Contexto dos documentos curriculares (BNCC/PCN):
+Referência curricular (BNCC/PCN):
 {context}
 
-Gere as {quantidade} questões em JSON válido, sem markdown ao redor."""),
+Gere o JSON com exatamente {quantidade} questões."""),
 ])
 
 # ---------------------------------------------------------------------------
@@ -150,25 +123,18 @@ Gere as {quantidade} questões em JSON válido, sem markdown ao redor."""),
 # ---------------------------------------------------------------------------
 
 _VALIDATION_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """Você é um especialista em matemática e didática da Educação Básica.
-Sua tarefa é VERIFICAR e CORRIGIR uma lista de atividades gerada por IA.
+    ("system", """Você é especialista em Educação Básica. Verifique e corrija cada questão:
+1. Resposta matematicamente/conceitualmente correta?
+2. Conteúdo dentro do escopo do ano?
 
-Para cada questão, verifique:
-1. A resposta está MATEMATICAMENTE ou CONCEITUALMENTE correta?
-2. O nível de dificuldade está adequado ao ano escolar?
-3. O conteúdo está dentro do escopo curricular do ano?
-4. A habilidade BNCC citada existe e é adequada?
+Escopo: {escopo_curricular}
 
-Escopo curricular do ano:
-{escopo_curricular}
+Retorne o MESMO JSON, adicionando em cada questão:
+  "validacao": "ok" ou "corrigido"
+  "nota_validacao": "o que corrigiu" (só se corrigido)
 
-Retorne o JSON corrigido no MESMO formato, com um campo extra por questão:
-  "validacao": "ok" | "corrigido"
-  "nota_validacao": "O que foi corrigido (se aplicável)"
-
-Retorne APENAS o JSON, sem texto adicional nem markdown.
-"""),
-    ("human", "Verifique e corrija este JSON de atividades:\n\n{atividades_json}"),
+Retorne APENAS o JSON, sem markdown."""),
+    ("human", "Verifique:\n{atividades_json}"),
 ])
 
 
@@ -325,10 +291,16 @@ def generate_activities(
     ]
     docs = [d for d in docs if not any(p in d.page_content for p in _SKIP_PHRASES)][:6]
 
-    context = "\n\n---\n\n".join(
-        f"[{d.metadata.get('source', 'Fonte')}] {d.page_content}"
-        for d in docs
-    ) or "Use o escopo curricular acima como referência principal."
+    # Limita contexto a 1200 chars por trecho para não exceder tokens do modelo
+    context_parts = []
+    for d in docs:
+        snippet = d.page_content[:400]
+        source = d.metadata.get("source", "Fonte")
+        context_parts.append(f"[{source}] {snippet}")
+    context = "\n---\n".join(context_parts) or "Use o escopo curricular como referência."
+
+    # Limita escopo a 600 chars para o prompt caber dentro do limite
+    escopo_curto = escopo[:600] if len(escopo) > 600 else escopo
 
     llm = get_llm(temperature=0.4)
 
@@ -339,7 +311,7 @@ def generate_activities(
         "topico": topico,
         "componente": componente,
         "ano": ano_escolar,
-        "escopo_curricular": escopo,
+        "escopo_curricular": escopo_curto,
         "tipo_descricao": tipo_descricao,
         "quantidade": quantidade,
         "context": context,
@@ -359,17 +331,18 @@ def generate_activities(
             "corrections": 0,
             "elapsed_seconds": elapsed,
             "success": False,
-            "error": "Não foi possível gerar as atividades. Tente reformular o tópico.",
+            "error": "Não foi possível gerar as atividades. Tente reformular o tópico ou reduzir a quantidade de questões.",
             "sources": [],
         }
 
     # ── Passo 2: Validação ────────────────────────────────────────────────
+    # Envia JSON compacto (sem indentação) para reduzir tokens
     logger.info("activity_validation_start", questoes=len(data.get("questoes", [])))
     val_llm = get_llm(temperature=0.1)
     val_chain = _VALIDATION_PROMPT | val_llm
     val_response = val_chain.invoke({
-        "escopo_curricular": escopo,
-        "atividades_json": json.dumps(data, ensure_ascii=False, indent=2),
+        "escopo_curricular": escopo_curto,
+        "atividades_json": json.dumps(data, ensure_ascii=False, separators=(",", ":")),
     })
 
     raw_val = _fix_latex(_strip_code_fences(val_response.content))
