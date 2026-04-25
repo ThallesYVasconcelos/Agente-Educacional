@@ -12,6 +12,7 @@ import streamlit as st
 from src.automations.lesson_plan import generate_lesson_plan
 from src.automations.content_generator import generate_class_content, CURRICULUM_SCOPE
 from src.utils.pdf_export import markdown_to_pdf
+from src.utils.docx_export import markdown_to_docx
 from src.utils.topic_validator import check_topic_discipline, detect_discipline_with_llm
 
 st.set_page_config(page_title="Plano de Aula", page_icon="📝", layout="wide")
@@ -327,10 +328,10 @@ with tab1:
             st.markdown("---")
 
             nome_base = f"plano_{comp_efetivo.lower().replace(' ', '_')}"
-            col_pdf, col_md, _ = st.columns([1, 1, 1])
+            titulo_export = f"Plano de Aula — {comp_efetivo} ({ano})"
+            col_pdf, col_docx, _ = st.columns([1, 1, 1])
             with col_pdf:
-                titulo_pdf = f"Plano de Aula — {comp_efetivo} ({ano})"
-                pdf_bytes = markdown_to_pdf(result["lesson_plan"], titulo_pdf)
+                pdf_bytes = markdown_to_pdf(result["lesson_plan"], titulo_export)
                 st.download_button(
                     "⬇️ Baixar PDF",
                     data=pdf_bytes,
@@ -339,12 +340,13 @@ with tab1:
                     use_container_width=True,
                     type="primary",
                 )
-            with col_md:
+            with col_docx:
+                docx_bytes = markdown_to_docx(result["lesson_plan"], titulo_export)
                 st.download_button(
-                    "⬇️ Baixar Markdown",
-                    data=result["lesson_plan"].encode("utf-8"),
-                    file_name=f"{nome_base}.md",
-                    mime="text/markdown",
+                    "⬇️ Baixar Word (.docx)",
+                    data=docx_bytes,
+                    file_name=f"{nome_base}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     use_container_width=True,
                 )
 
@@ -525,10 +527,10 @@ with tab2:
                 f"conteudo_{topico[:30].lower().replace(' ', '_')}"
                 f"_{ano_content[:6].replace('º', '').replace(' ', '')}"
             )
-            col_pdf2, col_md2, _ = st.columns([1, 1, 1])
+            titulo_export2 = f"Conteúdo da Aula — {topico} ({ano_content})"
+            col_pdf2, col_docx2, _ = st.columns([1, 1, 1])
             with col_pdf2:
-                titulo_pdf2 = f"Conteúdo da Aula — {topico} ({ano_content})"
-                pdf_bytes2 = markdown_to_pdf(result["content"], titulo_pdf2)
+                pdf_bytes2 = markdown_to_pdf(result["content"], titulo_export2)
                 st.download_button(
                     "⬇️ Baixar PDF",
                     data=pdf_bytes2,
@@ -537,12 +539,13 @@ with tab2:
                     use_container_width=True,
                     type="primary",
                 )
-            with col_md2:
+            with col_docx2:
+                docx_bytes2 = markdown_to_docx(result["content"], titulo_export2)
                 st.download_button(
-                    "⬇️ Baixar Markdown",
-                    data=result["content"].encode("utf-8"),
-                    file_name=f"{slug}.md",
-                    mime="text/markdown",
+                    "⬇️ Baixar Word (.docx)",
+                    data=docx_bytes2,
+                    file_name=f"{slug}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     use_container_width=True,
                 )
 
