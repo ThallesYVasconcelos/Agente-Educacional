@@ -158,6 +158,9 @@ CUSTOM_CSS = """
         gap: 1rem;
         margin: 1.5rem 0 0.5rem 0;
     }
+    .feature-row-gap {
+        margin-top: 1.2rem;
+    }
     .stat-card {
         background: linear-gradient(135deg, #F0F3FF 0%, #FAFBFF 100%);
         padding: 1.4rem;
@@ -245,8 +248,9 @@ def home():
             <span class="badge">📚 Educação Básica · Gratuito</span>
             <h1>Assistente do Professor</h1>
             <p>
-                Tire dúvidas curriculares e crie planos de aula em segundos —
-                tudo embasado nos documentos oficiais do MEC, da Educação Infantil ao Ensino Médio.
+                Tire dúvidas curriculares, crie planos de aula, gere o conteúdo completo
+                da aula e monte listas de atividades com gabarito — tudo embasado nos
+                documentos oficiais do MEC, da Educação Infantil ao Ensino Médio.
             </p>
         </div>
         """,
@@ -258,16 +262,16 @@ def home():
         """
         <div class="stat-row">
             <div class="stat-card">
-                <div class="stat-value">5</div>
-                <div class="stat-label">Documentos oficiais do MEC</div>
+                <div class="stat-value">30+</div>
+                <div class="stat-label">Documentos oficiais do MEC indexados</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value">12</div>
-                <div class="stat-label">Anos da Educação Básica</div>
+                <div class="stat-label">Anos da Educação Básica cobertos</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">9</div>
-                <div class="stat-label">Componentes curriculares</div>
+                <div class="stat-value">4</div>
+                <div class="stat-label">Ferramentas para o professor</div>
             </div>
         </div>
         """,
@@ -382,8 +386,12 @@ def home():
                 <h3>Tirar dúvidas curriculares</h3>
                 <p>
                     Pergunte sobre habilidades da BNCC, objetivos do PCN,
-                    metodologias de alfabetização ou orientações curriculares para qualquer ano.
-                    O assistente sempre indica de qual documento veio a informação.
+                    metodologias de ensino ou orientações curriculares para qualquer ano.
+                    O assistente busca a resposta diretamente nos documentos do MEC
+                    e indica sempre a fonte consultada.
+                </p>
+                <p style="margin-top:0.6rem; font-size:0.88rem; color:#2E5BFF; font-weight:600;">
+                    → Menu: 💬 Tirar Dúvidas
                 </p>
             </div>
             """,
@@ -398,8 +406,55 @@ def home():
                 <h3>Criar plano de aula</h3>
                 <p>
                     Informe a disciplina, o ano e o tema — e receba um plano completo
-                    com objetivos, atividades, recursos e avaliação,
-                    já alinhado à BNCC e pronto para usar em sala.
+                    com objetivos, habilidades BNCC, sequência de atividades e avaliação,
+                    pronto para usar em sala. Baixe em PDF ou Word.
+                </p>
+                <p style="margin-top:0.6rem; font-size:0.88rem; color:#6B4EFF; font-weight:600;">
+                    → Menu: 📝 Plano de Aula
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown('<div class="feature-row-gap"></div>', unsafe_allow_html=True)
+    col3, col4 = st.columns(2, gap="large")
+
+    with col3:
+        st.markdown(
+            """
+            <div class="feature-card">
+                <span class="feature-icon">📖</span>
+                <h3>Gerar conteúdo completo da aula</h3>
+                <p>
+                    Receba a explicação completa do conteúdo para dominar o tema,
+                    um roteiro de como apresentar aos alunos com linguagem didática,
+                    exemplos resolvidos passo a passo e dicas pedagógicas —
+                    tudo respeitando o que é previsto para aquele ano (sem adiantar nem repetir série).
+                </p>
+                <p style="margin-top:0.6rem; font-size:0.88rem; color:#B23CFF; font-weight:600;">
+                    → Menu: 📝 Plano de Aula → aba "Conteúdo da Aula"
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with col4:
+        st.markdown(
+            """
+            <div class="feature-card">
+                <span class="feature-icon">✏️</span>
+                <h3>Gerar lista de atividades com gabarito</h3>
+                <p>
+                    Monte exercícios, situações-problema e atividades de fixação
+                    em segundos. O sistema gera e depois valida automaticamente cada resposta.
+                    Você recebe dois arquivos: a versão do aluno (sem gabarito)
+                    e o gabarito completo do professor, com resolução passo a passo
+                    e habilidade BNCC por questão.
+                </p>
+                <p style="margin-top:0.6rem; font-size:0.88rem; color:#0A7B3E; font-weight:600;">
+                    → Menu: ✏️ Atividades
                 </p>
             </div>
             """,
