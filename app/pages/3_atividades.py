@@ -143,6 +143,12 @@ PAGE_CSS = """
 
 st.markdown(PAGE_CSS, unsafe_allow_html=True)
 
+# ── Session state — persiste o último resultado durante a sessão ────────────
+if "ativ_result" not in st.session_state:
+    st.session_state.ativ_result = None
+if "ativ_meta" not in st.session_state:
+    st.session_state.ativ_meta = {}
+
 # ── Header ─────────────────────────────────────────────────────────────────
 st.markdown(
     """
@@ -160,7 +166,7 @@ with st.sidebar:
     st.markdown("### Como funciona")
     st.markdown(
         """
-        1. **Geração** — atividades respeitando o escopo da série (BNCC/PCN)
+        1. **Geração** — atividades explicitamente sobre o tópico, respeitando o escopo da série
         2. **Verificação de escopo** — detecta termos fora do ano automaticamente
         3. **Validação de respostas** — segundo agente confere cada gabarito
 
@@ -171,6 +177,19 @@ with st.sidebar:
         ✅ Validado · 🔧 Corrigido
         """
     )
+    # Histórico da sessão
+    if st.session_state.ativ_meta:
+        st.divider()
+        st.markdown("### Última lista gerada")
+        m = st.session_state.ativ_meta
+        st.caption(
+            f"**{m.get('topico','')}** · {m.get('componente','')} · {m.get('ano','')}\n\n"
+            f"{m.get('quantidade','')} questões · {m.get('tipo','')}"
+        )
+        if st.button("🗑 Limpar resultado", use_container_width=True):
+            st.session_state.ativ_result = None
+            st.session_state.ativ_meta = {}
+            st.rerun()
 
 # ── Listas ─────────────────────────────────────────────────────────────────
 ANOS = [
@@ -223,7 +242,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 gerar = st.button("✏️ Gerar atividades", type="primary", use_container_width=True)
 
-# ── Resultado ──────────────────────────────────────────────────────────────
+# ── Geração ────────────────────────────────────────────────────────────────
 if gerar:
     if not topico.strip():
         st.warning("Informe o tópico antes de gerar.")
@@ -241,6 +260,30 @@ if gerar:
     if not result["success"]:
         st.error(result.get("error", "Erro ao gerar. Tente reformular o tópico."))
         st.stop()
+
+    # Salva no session_state para persistir durante a sessão
+    st.session_state.ativ_result = result
+    st.session_state.ativ_meta = {
+        "topico": topico.strip(),
+        "componente": componente,
+        "ano": ano,
+        "tipo": ACTIVITY_TYPES.get(tipo, tipo),
+        "quantidade": int(quantidade),
+    }
+
+# ── Exibe resultado (do state — persiste após rerun) ───────────────────────
+if st.session_state.ativ_result:
+    result = st.session_state.ativ_result
+    meta = st.session_state.ativ_meta
+
+    # Cabeçalho do resultado
+    st.markdown(
+        f'<div style="margin:1.2rem 0 0.4rem 0;color:#5A6378;font-size:0.9rem;">'
+        f'📋 <strong>{meta.get("topico","")}</strong> · '
+        f'{meta.get("componente","")} · {meta.get("ano","")} · '
+        f'{meta.get("quantidade","")} questões</div>',
+        unsafe_allow_html=True,
+    )
 
     # ── Badges de status ──────────────────────────────────────────────────
     chk = result.get("check_result")
@@ -270,6 +313,11 @@ if gerar:
         st.caption(f"⚠️ Termos monitorados: {', '.join(chk.violations)}")
 
     # ── Abas aluno / professor ────────────────────────────────────────────
+    _t = meta.get("topico", "atividades")
+    _c = meta.get("componente", "")
+    _a = meta.get("ano", "")
+    _slug = _t[:25].replace(" ", "_")
+
     tab_aluno, tab_prof = st.tabs(["👧 Versão do Aluno", "👩‍🏫 Gabarito do Professor"])
 
     with tab_aluno:
@@ -282,9 +330,9 @@ if gerar:
                 "⬇️ Baixar PDF",
                 data=markdown_to_pdf(
                     result["student_md"],
-                    title=f"Atividades — {componente} ({ano}) | {topico}",
+                    title=f"Atividades — {_c} ({_a}) | {_t}",
                 ),
-                file_name=f"atividades_{topico[:25].replace(' ','_')}_aluno.pdf",
+                file_name=f"atividades_{_slug}_aluno.pdf",
                 mime="application/pdf",
                 use_container_width=True,
             )
@@ -293,9 +341,9 @@ if gerar:
                 "⬇️ Baixar Word",
                 data=markdown_to_docx(
                     result["student_md"],
-                    title=f"Atividades — {componente} ({ano}) | {topico}",
+                    title=f"Atividades — {_c} ({_a}) | {_t}",
                 ),
-                file_name=f"atividades_{topico[:25].replace(' ','_')}_aluno.docx",
+                file_name=f"atividades_{_slug}_aluno.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 use_container_width=True,
             )
@@ -310,9 +358,9 @@ if gerar:
                 "⬇️ Baixar PDF (com gabarito)",
                 data=markdown_to_pdf(
                     result["teacher_md"],
-                    title=f"Gabarito — {componente} ({ano}) | USO DO PROFESSOR",
+                    title=f"Gabarito — {_c} ({_a}) | USO DO PROFESSOR",
                 ),
-                file_name=f"gabarito_{topico[:25].replace(' ','_')}_professor.pdf",
+                file_name=f"gabarito_{_slug}_professor.pdf",
                 mime="application/pdf",
                 use_container_width=True,
             )
@@ -321,9 +369,9 @@ if gerar:
                 "⬇️ Baixar Word (com gabarito)",
                 data=markdown_to_docx(
                     result["teacher_md"],
-                    title=f"Gabarito — {componente} ({ano}) | USO DO PROFESSOR",
+                    title=f"Gabarito — {_c} ({_a}) | USO DO PROFESSOR",
                 ),
-                file_name=f"gabarito_{topico[:25].replace(' ','_')}_professor.docx",
+                file_name=f"gabarito_{_slug}_professor.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 use_container_width=True,
             )

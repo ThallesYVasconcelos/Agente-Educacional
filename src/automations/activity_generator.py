@@ -93,16 +93,28 @@ ACTIVITY_TYPES = {
 
 _GENERATION_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """Você é professor especialista em Educação Básica brasileira.
-Gere atividades pedagógicas precisas e adequadas à faixa etária.
+Gere atividades pedagógicas DIRETAMENTE sobre o tópico informado.
+
+⚠️ REGRA PRINCIPAL: TODAS as questões devem ser EXPLICITAMENTE sobre "{topico}".
+Não gere questões de outros conteúdos. Não use o tópico apenas como "contexto" de um
+problema de outro assunto. O tópico deve ser o objeto direto de cálculo ou raciocínio.
+
+Exemplo ERRADO (tópico: Potenciação):
+  "Maria tem 3 caixas com 4 docinhos cada. Quantos docinhos no total?" ← isso é multiplicação, NÃO potenciação.
+
+Exemplo CERTO (tópico: Potenciação):
+  "Calcule 3⁴." ou "Uma bactéria se duplica a cada hora. Partindo de 1 bactéria, quantas
+   haverá após 5 horas? Escreva como potência e calcule."
 
 ESCOPO CURRICULAR ({ano} — {componente}):
 {escopo_curricular}
 
-REGRAS:
+REGRAS ADICIONAIS:
 - Respeite o escopo: não antecipe conteúdos de séries superiores.
-- Use português claro. Proibido LaTeX: use × ÷ ² ³ no lugar.
+- Use português claro. Proibido LaTeX: use × ÷ ² ³ ⁴ ⁵ no lugar.
 - Tipo: {tipo_descricao}
 - Quantidade: {quantidade} questões
+- Gradação obrigatória: distribua entre fácil, médio e desafiador.
 
 Retorne APENAS este JSON (sem markdown, sem texto extra):
 {{"titulo":"...","disciplina":"{componente}","ano":"{ano}","topico":"{topico}","habilidades_gerais":["EF.."],"questoes":[{{"numero":1,"tipo":"calculo|multipla_escolha|situacao_problema","enunciado":"...","alternativas":[],"resposta_correta":"...","resolucao_passo_a_passo":"Passo 1:... Resultado:...","habilidade_bncc":"EF..","nivel":"facil|medio|desafiador"}}]}}
@@ -112,10 +124,12 @@ alternativas: lista vazia [] exceto em múltipla escolha.
     ("human", """Disciplina: {componente} | Ano: {ano} | Tópico: {topico}
 Tipo: {tipo_descricao} | Questões: {quantidade}
 
+IMPORTANTE: todas as questões devem ser sobre {topico}, de forma explícita.
+
 Referência curricular (BNCC/PCN):
 {context}
 
-Gere o JSON com exatamente {quantidade} questões."""),
+Gere o JSON com exatamente {quantidade} questões sobre {topico}."""),
 ])
 
 # ---------------------------------------------------------------------------
