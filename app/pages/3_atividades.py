@@ -284,8 +284,7 @@ if gerar:
         with col_pdf:
             pdf_aluno = markdown_to_pdf(
                 result["student_md"],
-                title=f"Atividades — {componente} ({ano})",
-                subtitle=f"Tópico: {topico}",
+                title=f"Atividades — {componente} ({ano}) | Tópico: {topico}",
             )
             st.download_button(
                 "⬇️ Baixar PDF (versão aluno)",
@@ -297,8 +296,7 @@ if gerar:
         with col_docx:
             docx_aluno = markdown_to_docx(
                 result["student_md"],
-                title=f"Atividades — {componente} ({ano})",
-                subtitle=f"Tópico: {topico}",
+                title=f"Atividades — {componente} ({ano}) | Tópico: {topico}",
             )
             st.download_button(
                 "⬇️ Baixar DOCX (versão aluno)",
@@ -324,8 +322,7 @@ if gerar:
         with col_pdf2:
             pdf_prof = markdown_to_pdf(
                 result["teacher_md"],
-                title=f"Gabarito — {componente} ({ano})",
-                subtitle=f"Tópico: {topico} | USO EXCLUSIVO DO PROFESSOR",
+                title=f"Gabarito — {componente} ({ano}) | USO DO PROFESSOR",
             )
             st.download_button(
                 "⬇️ Baixar PDF (gabarito professor)",
@@ -337,8 +334,7 @@ if gerar:
         with col_docx2:
             docx_prof = markdown_to_docx(
                 result["teacher_md"],
-                title=f"Gabarito — {componente} ({ano})",
-                subtitle=f"Tópico: {topico} | USO EXCLUSIVO DO PROFESSOR",
+                title=f"Gabarito — {componente} ({ano}) | USO DO PROFESSOR",
             )
             st.download_button(
                 "⬇️ Baixar DOCX (gabarito professor)",
