@@ -472,6 +472,7 @@ pg = st.navigation([
     st.Page(home, title="Início", icon="📚", default=True),
     st.Page("pages/1_assistente.py", title="Tirar Dúvidas", icon="💬"),
     st.Page("pages/2_plano_aula.py", title="Plano de Aula", icon="📝"),
+    st.Page("pages/3_atividades.py", title="Atividades", icon="✏️"),
 ])
 
 pg.run()
