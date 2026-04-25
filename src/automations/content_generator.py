@@ -121,7 +121,7 @@ CURRICULUM_SCOPE: dict[str, dict[str, str]] = {
             "potenciação como multiplicação repetida — base e expoente naturais (EF06MA07); "
             "propriedades da potenciação: produto e quociente de mesma base, potência de potência — "
             "APENAS com expoentes naturais (NÃO usar expoentes negativos nem fracionários); "
-            "radiciação como operação inversa da potenciação (raiz quadrada e cúbica de perfeitos); "
+            "NÃO trabalhar radiciação (raiz quadrada/cúbica): isso é conteúdo do 7º ano; "
             "múltiplos e divisores, MDC, MMC; razão e proporção; porcentagem; "
             "área de triângulo e paralelogramo; coordenadas cartesianas (1º quadrante)."
         ),
@@ -129,6 +129,9 @@ CURRICULUM_SCOPE: dict[str, dict[str, str]] = {
             "Números racionais (frações e decimais); operações com racionais; "
             "expressões algébricas (variável, monômios, polinômios simples); equações do 1º grau; "
             "propriedades da potenciação com expoentes inteiros NEGATIVOS — introdução (EF07MA01/02); "
+            "radiciação introdutória: raiz quadrada e cúbica de números perfeitos como operação inversa "
+            "da potenciação — APENAS quadrados e cubos perfeitos (ex: √25=5, ³√8=2); "
+            "NÃO trabalhar expoentes fracionários nem raízes de não-perfeitos (isso é do 8º ano); "
             "porcentagem e juros simples; geometria: escala, semelhança, ângulos de triângulo; "
             "circunferência e círculo (comprimento e área)."
         ),
