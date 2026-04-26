@@ -174,8 +174,8 @@ def _get_scope(componente: str, ano: str) -> str:
 ACTIVITY_TYPES = {
     "exercicios": "Exercícios objetivos (cálculo, resposta direta)",
     "fixacao": "Fixação com resolução passo a passo",
-    "situacao": "Situações-problema / problemas contextualizados",
-    "misto": "Misto: exercícios objetivos + situações-problema",
+    "situacao": "Situações-problema (enunciado em parágrafo, com contexto)",
+    "misto": "Misto: parte direta + parte com texto contextualizado",
 }
 
 # Para disciplinas conceituais, remapear tipos para evitar que o LLM
@@ -183,9 +183,100 @@ ACTIVITY_TYPES = {
 _ACTIVITY_TYPES_CONCEITUAL = {
     "exercicios": "Questões objetivas conceituais (definição, identificação, exemplificação)",
     "fixacao": "Questões dissertativas com explicação passo a passo do raciocínio",
-    "situacao": "Questões com cenário real que exijam raciocínio da disciplina (sem cálculo numérico)",
+    "situacao": "Situações-problema: mini-texto (várias frases) com cenário real e pergunta ao final (sem cálculo numérico)",
     "misto": "Misto: múltipla escolha conceitual + questões dissertativas + análise de situações reais",
 }
+
+
+def _build_enunciado_instructions(tipo: str, natureza: str) -> str:
+    """
+    Regras de extensão e narrativa para o campo 'enunciado' no JSON.
+    Evita enunciados de uma linha em situações-problema e força contexto em Matemática.
+    """
+    comum = (
+        "FORMATO DO ENUNCIADO (campo \"enunciado\" no JSON):\n"
+        "- Use texto corrido; se precisar de mais de um parágrafo, separe com \\n\\n no JSON.\n"
+        "- Não coloque tudo em uma única frase curta quando o tipo pede situação ou fixação.\n"
+    )
+    if natureza == "conceitual":
+        if tipo == "situacao":
+            return comum + (
+                "TIPO: situações-problema (conceitual).\n"
+                "- Mínimo 4 frases completas por questão: apresente quem/cenário, relacione ao tópico, "
+                "desenvolva a situação e termine com a pergunta explícita.\n"
+                "- Evite enunciados de uma linha; o aluno deve ler um mini-texto antes da pergunta.\n"
+            )
+        if tipo == "fixacao":
+            return comum + (
+                "TIPO: fixação (conceitual).\n"
+                "- Mínimo 3 frases: contextualize o conteúdo, explique o que se pede e formule a pergunta.\n"
+            )
+        if tipo == "misto":
+            return comum + (
+                "TIPO: misto (conceitual).\n"
+                "- Em pelo menos metade das questões use mini-texto (mín. 4 frases) com situação antes da pergunta.\n"
+                "- As outras podem ser mais objetivas, mas nunca só uma palavra ou comando seco.\n"
+            )
+        return comum + (
+            "TIPO: exercícios objetivos (conceitual).\n"
+            "- Mesmo objetivas: use 2 frases quando fizer sentido (contexto + pergunta).\n"
+        )
+
+    # natureza == exata (Matemática, Física, Química)
+    if tipo == "situacao":
+        return comum + (
+            "TIPO: situações-problema (Matemática/exatas).\n"
+            "- OBRIGATÓRIO: narrativa com contexto real ou plausível (cotidiano, escola, loja, ciência, esporte etc.).\n"
+            "- Mínimo 3 frases de contexto ANTES da pergunta final; em questões médias/desafiadoras prefira 4–5 frases.\n"
+            "- Os dados numéricos devem aparecer dentro da história (não liste números soltos sem texto).\n"
+            "- PROIBIDO: enunciado que seja só 'Calcule…', só 'Determine…', só 'Resolva a equação…' ou só a expressão "
+            "matemática isolada, sem parágrafo de situação.\n"
+        )
+    if tipo == "misto":
+        return comum + (
+            "TIPO: misto (Matemática/exatas).\n"
+            "- Em aproximadamente METADE das questões (arredonde para cima): problema contextualizado completo, "
+            "como em situações-problema (mín. 3 frases de narrativa + pergunta).\n"
+            "- Nas demais, exercício direto é permitido, mas alterne: nunca todas sem contexto.\n"
+            "- Nenhuma questão 'contextualizada' pode ser só comando ou só equação.\n"
+        )
+    if tipo == "fixacao":
+        return comum + (
+            "TIPO: fixação (exatas).\n"
+            "- Em cada questão: 2–3 frases explicando a ideia ou os dados, depois o que calcular; "
+            "evite só 'Resolva passo a passo: …' sem introdução.\n"
+        )
+    return comum + (
+        "TIPO: exercícios objetivos (exatas).\n"
+        "- Pode ser mais curto, mas quando houver números no enunciado prefira uma frase de contexto antes do comando.\n"
+    )
+
+
+def _build_validacao_enunciado_instructions(tipo: str, natureza: str) -> str:
+    """Instruções extras para o validador reescrever enunciados curtos ou sem narrativa."""
+    if natureza == "conceitual" and tipo in ("situacao", "misto", "fixacao"):
+        return (
+            "ENUNCIADOS: se alguma questão tiver menos de 3 frases (ou for só comando seco), reescreva com "
+            "mini-texto adequado ao tipo e marque validacao: corrigido.\n"
+            + (
+                "Em situações-problema, exija pelo menos 4 frases quando o enunciado estiver muito curto.\n"
+                if tipo == "situacao"
+                else ""
+            )
+        )
+    if natureza == "exata" and tipo == "situacao":
+        return (
+            "ENUNCIADOS: se a questão for só cálculo/equação sem parágrafo de situação (menos de 3 frases de contexto), "
+            "reescreva como problema contextualizado completo, mantendo os mesmos números e o mesmo objetivo matemático, "
+            "e marque validacao: corrigido.\n"
+        )
+    if natureza == "exata" and tipo == "misto":
+        return (
+            "ENUNCIADOS: para as questões que deveriam ser contextualizadas (cerca de metade), se vierem só comando "
+            "ou equação, reescreva com narrativa (mín. 3 frases) antes da pergunta; marque corrigido.\n"
+        )
+    return ""
+
 
 # ---------------------------------------------------------------------------
 # Prompt de Geração
@@ -200,6 +291,8 @@ Tarefa: gerar {quantidade} questões sobre TÓPICO="{topico}" na DISCIPLINA="{co
 NATUREZA DA DISCIPLINA: {natureza_disciplina}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {instrucoes_por_natureza}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{instrucoes_enunciado}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ESCOPO CURRICULAR — {componente} — {ano}:
@@ -239,6 +332,8 @@ CRITÉRIOS DE VALIDAÇÃO:
 3. A questão exige realmente conhecimento de "{topico}" em "{componente}"?
 
 {instrucoes_validacao_por_natureza}
+
+{instrucoes_validacao_enunciado}
 
 Para cada questão com problema: corrija SUBSTITUINDO o enunciado, resposta e resolução.
 Marque "validacao":"corrigido" e descreva o que mudou em "nota_validacao".
@@ -420,6 +515,9 @@ def generate_activities(
             f"Pergunte o que um professor de {componente} perguntaria — conceitos, análise, interpretação."
         )
 
+    instrucoes_enunciado = _build_enunciado_instructions(tipo, natureza)
+    instrucoes_validacao_enunciado = _build_validacao_enunciado_instructions(tipo, natureza)
+
     # ── Busca trechos de documentos curriculares relevantes ───────────────
     query_hab = f"habilidades BNCC {componente} {topico} {ano_escolar}"
     query_ped = f"{topico} {componente} {ano_escolar} atividades"
@@ -474,6 +572,7 @@ def generate_activities(
             "context": context,
             "natureza_disciplina": natureza_label,
             "instrucoes_por_natureza": instrucoes_por_natureza,
+            "instrucoes_enunciado": instrucoes_enunciado,
             "lembrete_por_natureza": lembrete,
         })
 
@@ -535,6 +634,7 @@ def generate_activities(
         "escopo_curricular": escopo_curto,
         "natureza_disciplina": natureza_label,
         "instrucoes_validacao_por_natureza": instrucoes_validacao,
+        "instrucoes_validacao_enunciado": instrucoes_validacao_enunciado,
         "atividades_json": json.dumps(data, ensure_ascii=False, separators=(",", ":")),
     })
 
