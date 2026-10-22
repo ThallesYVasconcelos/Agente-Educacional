@@ -22,10 +22,6 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 app = typer.Typer()
 
-# ---------------------------------------------------------------------------
-# Casos de teste — A1: Plano de Aula
-# ---------------------------------------------------------------------------
-
 LESSON_PLAN_CASES = [
     {
         "id": "LP01",
@@ -73,10 +69,6 @@ LESSON_PLAN_CASES = [
         "expected_min_citations": 2,
     },
 ]
-
-# ---------------------------------------------------------------------------
-# Casos de teste — A2: Verificador BNCC
-# ---------------------------------------------------------------------------
 
 BNCC_CHECK_CASES = [
     {

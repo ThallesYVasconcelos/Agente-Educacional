@@ -32,9 +32,6 @@ def make_state(**kwargs) -> AgentState:
     return defaults
 
 
-# ---------------------------------------------------------------------------
-# Supervisor
-# ---------------------------------------------------------------------------
 
 @patch("src.agents.graph.get_llm")
 def test_supervisor_routes_qa(mock_llm):
@@ -69,9 +66,6 @@ def test_supervisor_routes_refuse_on_invalid_json(mock_llm):
     assert result["route"] == "qa"  # fallback para qa
 
 
-# ---------------------------------------------------------------------------
-# Roteamento condicional
-# ---------------------------------------------------------------------------
 
 def test_route_after_supervisor_qa():
     state = make_state(route="qa")
@@ -104,9 +98,6 @@ def test_route_after_self_check_refuse_after_max_attempts(mock_settings):
     assert route_after_self_check(state) == "refuse"
 
 
-# ---------------------------------------------------------------------------
-# Safety
-# ---------------------------------------------------------------------------
 
 def test_safety_adds_note_for_health_keywords():
     state = make_state(question="Como lidar com saúde mental dos alunos?")
@@ -120,9 +111,6 @@ def test_safety_no_note_for_normal_questions():
     assert result["safety_note"] == ""
 
 
-# ---------------------------------------------------------------------------
-# Recusa
-# ---------------------------------------------------------------------------
 
 def test_refuse_node_returns_message():
     state = make_state()

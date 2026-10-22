@@ -57,7 +57,6 @@ def run_giskard_eval(max_questions: int = 20) -> dict[str, Any]:
     questions = load_questions(max_questions)
     agent = EducacaoAgent()
 
-    # 1. Função de predição para o Giskard
     def predict_answers(df: pd.DataFrame) -> list[str]:
         results = []
         for _, row in df.iterrows():
@@ -70,7 +69,6 @@ def run_giskard_eval(max_questions: int = 20) -> dict[str, Any]:
                 results.append("Erro ao processar pergunta")
         return results
 
-    # 2. Dataset no formato esperado pelo Giskard
     df_data = []
     for item in questions:
         df_data.append({
@@ -88,7 +86,6 @@ def run_giskard_eval(max_questions: int = 20) -> dict[str, Any]:
         cat_columns=[],
     )
 
-    # 3. Modelo Giskard (text_generation)
     model = Model(
         model=predict_answers,
         model_type="text_generation",
@@ -118,7 +115,6 @@ def run_giskard_eval(max_questions: int = 20) -> dict[str, Any]:
             logger.warning("giskard_test_suite_error", error=str(e))
             test_results = {"error": str(e)}
 
-    # 6. Compilar resultados
     results = {
         "evaluation_type": "giskard",
         "dataset_size": len(questions),
@@ -198,7 +194,6 @@ def main(
             json.dump(save_results, f, ensure_ascii=False, indent=2)
         typer.echo(f"\nResultados salvos em: {out_json}")
 
-        # Salvar relatório
         report = generate_report(results)
         out_md = output_path / f"giskard_report_{int(time.time())}.md"
         with open(out_md, "w", encoding="utf-8") as f:

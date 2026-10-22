@@ -22,18 +22,10 @@ from docx.oxml import OxmlElement
 from docx.shared import Pt, RGBColor, Cm
 
 
-# ---------------------------------------------------------------------------
-# Cores da identidade visual
-# ---------------------------------------------------------------------------
-
 PRIMARY = RGBColor(46, 91, 255)
 DARK = RGBColor(26, 31, 54)
 GRAY = RGBColor(90, 99, 120)
 
-
-# ---------------------------------------------------------------------------
-# Parser de spans inline (negrito / itálico)
-# ---------------------------------------------------------------------------
 
 _INLINE_RE = re.compile(
     r"\*\*\*(?P<bi>.+?)\*\*\*"
@@ -78,10 +70,6 @@ def _clean_llm_output(text: str) -> str:
     return text.strip()
 
 
-# ---------------------------------------------------------------------------
-# Helpers DOCX
-# ---------------------------------------------------------------------------
-
 def _add_border_left(paragraph, color: str = "2E5BFF", width: int = 12):
     """Adiciona borda esquerda a um parágrafo (estilo blockquote)."""
     pPr = paragraph._p.get_or_add_pPr()
@@ -112,7 +100,6 @@ def _add_inline_spans(paragraph, spans: list[tuple[str, bool, bool]],
 def _heading(doc: Document, text: str, level: int):
     clean = _strip_md(text)
     p = doc.add_heading(clean, level=level)
-    # Aplica cor primária ao título
     for run in p.runs:
         run.font.color.rgb = PRIMARY
     return p
@@ -157,10 +144,6 @@ def _horizontal_rule(doc: Document):
     return p
 
 
-# ---------------------------------------------------------------------------
-# Configuração de estilos do documento
-# ---------------------------------------------------------------------------
-
 def _setup_styles(doc: Document):
     """Ajusta estilos globais do documento."""
     style = doc.styles["Normal"]
@@ -168,7 +151,6 @@ def _setup_styles(doc: Document):
     style.font.size = Pt(11)
     style.font.color.rgb = DARK
 
-    # Espaçamento entre parágrafos
     style.paragraph_format.space_after = Pt(6)
 
     for level in range(1, 4):
@@ -183,7 +165,6 @@ def _setup_styles(doc: Document):
 
 def _add_title_block(doc: Document, title: str):
     """Adiciona o cabeçalho visual do documento."""
-    # Faixa de título
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(4)
@@ -194,10 +175,8 @@ def _add_title_block(doc: Document, title: str):
     run.font.name = "Calibri"
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # Linha decorativa
     _horizontal_rule(doc)
 
-    # Subtítulo/crédito
     sub = doc.add_paragraph()
     sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
     sub_run = sub.add_run("Assistente do Professor — EduRAG (BNCC/PCN)")
@@ -207,10 +186,6 @@ def _add_title_block(doc: Document, title: str):
 
     doc.add_paragraph()  # espaço
 
-
-# ---------------------------------------------------------------------------
-# Parser de linhas Markdown → documento DOCX
-# ---------------------------------------------------------------------------
 
 _HEADING_RE = re.compile(r"^(#{1,3})\s+(.*)")
 _BULLET_RE = re.compile(r"^(\s*)[-*+]\s+(.*)")
@@ -232,7 +207,6 @@ def markdown_to_docx(markdown_text: str, title: str = "Documento") -> bytes:
     doc = Document()
     _setup_styles(doc)
 
-    # Margens
     section = doc.sections[0]
     section.top_margin = Cm(2)
     section.bottom_margin = Cm(2)
@@ -275,7 +249,6 @@ def markdown_to_docx(markdown_text: str, title: str = "Documento") -> bytes:
             _numbered_para(doc, _parse_inline(m_n.group(2).strip()))
             continue
 
-        # Parágrafo normal
         p = doc.add_paragraph()
         _add_inline_spans(p, _parse_inline(stripped))
 

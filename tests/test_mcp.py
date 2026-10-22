@@ -11,9 +11,6 @@ from src.mcp.server import app
 client = TestClient(app)
 
 
-# ---------------------------------------------------------------------------
-# Health e discovery
-# ---------------------------------------------------------------------------
 
 def test_health():
     resp = client.get("/health")
@@ -43,9 +40,6 @@ def test_get_info():
     assert "tools_disponiveis" in data
 
 
-# ---------------------------------------------------------------------------
-# Validações de input
-# ---------------------------------------------------------------------------
 
 def test_search_docs_query_too_long():
     resp = client.post("/tools/search_docs", json={"query": "a" * 2001, "top_k": 5})
@@ -77,9 +71,6 @@ def test_bncc_check_descricao_too_long():
     assert resp.status_code == 422
 
 
-# ---------------------------------------------------------------------------
-# list_sources
-# ---------------------------------------------------------------------------
 
 def test_list_sources_returns_list():
     with patch("src.mcp.tools.Path") as mock_path:

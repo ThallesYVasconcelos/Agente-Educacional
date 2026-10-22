@@ -143,13 +143,11 @@ PAGE_CSS = """
 
 st.markdown(PAGE_CSS, unsafe_allow_html=True)
 
-# ── Session state — persiste o último resultado durante a sessão ────────────
 if "ativ_result" not in st.session_state:
     st.session_state.ativ_result = None
 if "ativ_meta" not in st.session_state:
     st.session_state.ativ_meta = {}
 
-# ── Header ─────────────────────────────────────────────────────────────────
 st.markdown(
     """
     <div class="page-header">
@@ -161,7 +159,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ── Sidebar compacta ───────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### Como funciona")
     st.markdown(
@@ -177,7 +174,6 @@ with st.sidebar:
         ✅ Validado · 🔧 Corrigido
         """
     )
-    # Histórico da sessão
     if st.session_state.ativ_meta:
         st.divider()
         st.markdown("### Última lista gerada")
@@ -191,7 +187,6 @@ with st.sidebar:
             st.session_state.ativ_meta = {}
             st.rerun()
 
-# ── Listas ─────────────────────────────────────────────────────────────────
 ANOS = [
     "1º ano do Ensino Fundamental", "2º ano do Ensino Fundamental",
     "3º ano do Ensino Fundamental", "4º ano do Ensino Fundamental",
@@ -206,7 +201,6 @@ DISCIPLINAS = sorted(set(
     ["Arte", "Educação Física", "Ensino Religioso", "Língua Estrangeira (Inglês)"]
 ))
 
-# ── Formulário em card único ───────────────────────────────────────────────
 st.markdown('<div class="form-card"><h4>Configure a lista de atividades</h4>', unsafe_allow_html=True)
 
 topico = st.text_input(
@@ -232,7 +226,6 @@ with col_tipo:
 with col_qtd:
     quantidade = st.number_input("Questões", min_value=3, max_value=10, value=6, step=1)
 
-# Escopo curricular — discreto, dentro do card
 escopo_atual = CURRICULUM_SCOPE.get(componente, {}).get(ano, "")
 if escopo_atual:
     with st.expander("Ver escopo curricular deste ano"):
@@ -242,7 +235,6 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 gerar = st.button("✏️ Gerar atividades", type="primary", use_container_width=True)
 
-# ── Geração ────────────────────────────────────────────────────────────────
 if gerar:
     if not topico.strip():
         st.warning("Informe o tópico antes de gerar.")
@@ -271,12 +263,10 @@ if gerar:
         "quantidade": int(quantidade),
     }
 
-# ── Exibe resultado (do state — persiste após rerun) ───────────────────────
 if st.session_state.ativ_result:
     result = st.session_state.ativ_result
     meta = st.session_state.ativ_meta
 
-    # Cabeçalho do resultado
     st.markdown(
         f'<div style="margin:1.2rem 0 0.4rem 0;color:#5A6378;font-size:0.9rem;">'
         f'📋 <strong>{meta.get("topico","")}</strong> · '
@@ -285,7 +275,6 @@ if st.session_state.ativ_result:
         unsafe_allow_html=True,
     )
 
-    # ── Badges de status ──────────────────────────────────────────────────
     chk = result.get("check_result")
     badges = []
 
@@ -312,7 +301,6 @@ if st.session_state.ativ_result:
     if chk and not chk.scope_ok and chk.violations:
         st.caption(f"⚠️ Termos monitorados: {', '.join(chk.violations)}")
 
-    # ── Abas aluno / professor ────────────────────────────────────────────
     _t = meta.get("topico", "atividades")
     _c = meta.get("componente", "")
     _a = meta.get("ano", "")
@@ -376,7 +364,6 @@ if st.session_state.ativ_result:
                 use_container_width=True,
             )
 
-    # ── Fontes consultadas ────────────────────────────────────────────────
     sources = result.get("sources", [])
     if sources:
         with st.expander("📄 Documentos curriculares consultados"):

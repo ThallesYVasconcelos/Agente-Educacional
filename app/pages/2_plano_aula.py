@@ -194,10 +194,6 @@ def render_sources(sources, expander_label):
 
 tab1, tab2 = st.tabs(["📋  Criar Plano de Aula", "📖  Conteúdo da Aula"])
 
-# ---------------------------------------------------------------------------
-# Aba 1 — Gerador de Plano de Aula
-# ---------------------------------------------------------------------------
-
 with tab1:
     st.markdown(
         "Preencha os campos abaixo e receba um **plano de aula completo**, pronto "
@@ -226,7 +222,6 @@ with tab1:
 
     st.markdown("")
 
-    # ---- Estado de sessão para validação ----
     if "plano_componente_confirmado" not in st.session_state:
         st.session_state.plano_componente_confirmado = None
     if "plano_sugestao_disc" not in st.session_state:
@@ -242,7 +237,6 @@ with tab1:
             help="O assistente analisa o tema digitado e sugere a disciplina correta com as habilidades BNCC.",
         )
 
-    # ---- Botão: detectar disciplina via LLM ----
     if detectar_disc:
         if not habilidade.strip():
             st.warning("Digite o tema primeiro.")
@@ -254,7 +248,6 @@ with tab1:
             else:
                 st.warning("Não foi possível identificar a disciplina automaticamente.")
 
-    # ---- Exibe sugestão do LLM ----
     if st.session_state.plano_sugestao_disc:
         sug = st.session_state.plano_sugestao_disc
         if sug["disciplina"] and sug["disciplina"] != componente:
@@ -292,7 +285,6 @@ with tab1:
             )
             st.session_state.plano_sugestao_disc = None
 
-    # ---- Botão: gerar plano ----
     if gerar_plano:
         if not habilidade.strip():
             st.warning("Informe o tema ou a habilidade que deseja trabalhar.")
@@ -355,10 +347,6 @@ with tab1:
                 "📄 Ver trechos dos documentos utilizados como base",
             )
 
-# ---------------------------------------------------------------------------
-# Aba 2 — Gerador de Conteúdo de Aula com Escopo Curricular
-# ---------------------------------------------------------------------------
-
 with tab2:
     st.markdown(
         "Informe o **tópico** que deseja ensinar e o **ano escolar** — "
@@ -367,7 +355,6 @@ with tab2:
         "Nada além, nada aquém."
     )
 
-    # Aviso explicativo
     st.markdown(
         """
         <div style="background:#EEF1FF;border-left:4px solid #2E5BFF;border-radius:8px;
@@ -393,7 +380,6 @@ with tab2:
             "🎓 Ano escolar", ANOS_ESCOLARES, key="content_ano"
         )
 
-        # Mostra o escopo curricular mapeado para o ano selecionado
         escopo_preview = (
             CURRICULUM_SCOPE
             .get(componente_content, {})

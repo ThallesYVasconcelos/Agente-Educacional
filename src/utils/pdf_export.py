@@ -22,10 +22,6 @@ from fpdf.enums import XPos, YPos
 _FONTS_DIR = Path(__file__).parent / "fonts"
 
 
-# ---------------------------------------------------------------------------
-# Constantes visuais
-# ---------------------------------------------------------------------------
-
 PRIMARY_R, PRIMARY_G, PRIMARY_B = 46, 91, 255
 HEADING1_SIZE = 17
 HEADING2_SIZE = 13
@@ -36,9 +32,7 @@ LINE_H = 5.5
 MARGIN = 16
 
 
-# ---------------------------------------------------------------------------
-# Spans inline — parse de **negrito** e *itálico*
-# ---------------------------------------------------------------------------
+
 
 class _Span(NamedTuple):
     text: str
@@ -87,10 +81,6 @@ def _strip_md(text: str) -> str:
     return text.strip()
 
 
-# ---------------------------------------------------------------------------
-# Classe PDF
-# ---------------------------------------------------------------------------
-
 class _EduPDF(FPDF):
     def __init__(self, doc_title: str = "EduRAG"):
         super().__init__()
@@ -103,7 +93,6 @@ class _EduPDF(FPDF):
         self.add_font("DV", "I", str(_FONTS_DIR / "DejaVuSans-Oblique.ttf"))
         self.add_font("DV", "BI", str(_FONTS_DIR / "DejaVuSans-BoldOblique.ttf"))
 
-    # -- Cabeçalho --
     def header(self):
         self.set_fill_color(PRIMARY_R, PRIMARY_G, PRIMARY_B)
         self.rect(0, 0, 210, 7, "F")
@@ -115,7 +104,6 @@ class _EduPDF(FPDF):
         self.set_text_color(0, 0, 0)
         self.ln(1)
 
-    # -- Rodapé --
     def footer(self):
         self.set_y(-12)
         self.set_font("DV", "", 7)
@@ -127,18 +115,15 @@ class _EduPDF(FPDF):
         )
         self.set_text_color(0, 0, 0)
 
-    # -- Seleção de fonte --
     def _font(self, bold: bool = False, italic: bool = False, size: int = BODY_SIZE):
         style = ("B" if bold else "") + ("I" if italic else "")
         self.set_font("DV", style, size)
 
-    # -- Escrita inline sem quebrar linha (acumula spans) --
     def _write_spans(self, spans: list[_Span], h: float = LINE_H):
         for span in spans:
             self._font(span.bold, span.italic, BODY_SIZE)
             self.write(h, span.text)
 
-    # -- Título da seção h1/h2/h3 --
     def heading(self, text: str, level: int):
         self.ln(3)
         clean = _strip_md(text)
@@ -154,7 +139,6 @@ class _EduPDF(FPDF):
             self._font(bold=True, size=HEADING2_SIZE)
             self.set_text_color(PRIMARY_R, PRIMARY_G, PRIMARY_B)
             self.cell(0, 8, clean, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-            # Linha decorativa
             self.set_draw_color(PRIMARY_R, PRIMARY_G, PRIMARY_B)
             self.set_line_width(0.5)
             self.line(MARGIN, self.get_y(), 210 - MARGIN, self.get_y())
@@ -165,14 +149,12 @@ class _EduPDF(FPDF):
         self.set_text_color(0, 0, 0)
         self.ln(1)
 
-    # -- Linha normal de parágrafo --
     def paragraph(self, spans: list[_Span]):
         self.set_x(MARGIN)
         self._write_spans(spans)
         self.ln(LINE_H)
         self.set_x(MARGIN)
 
-    # -- Bullet list --
     def bullet(self, spans: list[_Span], level: int = 0):
         indent = MARGIN + level * 5
         self.set_x(indent)
@@ -183,7 +165,6 @@ class _EduPDF(FPDF):
         self.ln(LINE_H)
         self.set_x(MARGIN)
 
-    # -- Numbered list --
     def numbered(self, spans: list[_Span], num: int):
         self.set_x(MARGIN)
         self._font(bold=True, size=BODY_SIZE)
@@ -193,7 +174,6 @@ class _EduPDF(FPDF):
         self.ln(LINE_H)
         self.set_x(MARGIN)
 
-    # -- Blockquote --
     def blockquote(self, text: str):
         self.set_fill_color(240, 243, 255)
         self.set_draw_color(PRIMARY_R, PRIMARY_G, PRIMARY_B)
@@ -210,7 +190,6 @@ class _EduPDF(FPDF):
         self.set_text_color(0, 0, 0)
         self.ln(1)
 
-    # -- Divisor --
     def divider(self):
         self.ln(2)
         self.set_draw_color(200, 210, 240)
@@ -218,7 +197,6 @@ class _EduPDF(FPDF):
         self.line(MARGIN, self.get_y(), 210 - MARGIN, self.get_y())
         self.ln(3)
 
-    # -- Cabeçalho do documento (título principal) --
     def doc_title(self, title: str):
         self.set_fill_color(237, 241, 255)
         self._font(bold=True, size=HEADING1_SIZE + 3)
@@ -229,10 +207,6 @@ class _EduPDF(FPDF):
         self.ln(2)
         self.divider()
 
-
-# ---------------------------------------------------------------------------
-# Parser Markdown → chamadas PDF
-# ---------------------------------------------------------------------------
 
 _HEADING_RE = re.compile(r"^(#{1,3})\s+(.*)")
 _BULLET_RE = re.compile(r"^(\s*)[-*+]\s+(.*)")
@@ -278,33 +252,28 @@ def markdown_to_pdf(markdown_text: str, title: str = "Documento") -> bytes:
     for raw in lines:
         stripped = raw.strip()
 
-        # Linha vazia
         if not stripped:
             pdf.ln(2)
             num_counter = 0
             continue
 
-        # Divisor
         if _RULE_RE.match(stripped):
             pdf.divider()
             num_counter = 0
             continue
 
-        # Blockquote
         m_bq = _BQ_RE.match(stripped)
         if m_bq:
             pdf.blockquote(m_bq.group(1))
             num_counter = 0
             continue
 
-        # Títulos
         m_h = _HEADING_RE.match(stripped)
         if m_h:
             pdf.heading(m_h.group(2).strip(), len(m_h.group(1)))
             num_counter = 0
             continue
 
-        # Bullet
         m_b = _BULLET_RE.match(raw)
         if m_b:
             level = len(m_b.group(1)) // 2
@@ -312,14 +281,12 @@ def markdown_to_pdf(markdown_text: str, title: str = "Documento") -> bytes:
             num_counter = 0
             continue
 
-        # Numerado
         m_n = _NUMBERED_RE.match(stripped)
         if m_n:
             num_counter += 1
             pdf.numbered(_parse_inline(m_n.group(2).strip()), num_counter)
             continue
 
-        # Parágrafo normal
         num_counter = 0
         pdf.paragraph(_parse_inline(stripped))
 

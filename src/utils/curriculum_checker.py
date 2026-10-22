@@ -31,11 +31,9 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Restrições explícitas por ano — complementam o CURRICULUM_SCOPE.
 # Cada entrada: (ano, disciplina) -> lista de termos proibidos.
 # Baseado nas anotações "NÃO trabalhar" do CURRICULUM_SCOPE.
-# ---------------------------------------------------------------------------
 
 _FORBIDDEN: dict[tuple[str, str], list[str]] = {
     # Matemática — anos iniciais
@@ -108,10 +106,6 @@ _FORBIDDEN: dict[tuple[str, str], list[str]] = {
     ],
 }
 
-# ---------------------------------------------------------------------------
-# Dataclass de resultado
-# ---------------------------------------------------------------------------
-
 @dataclass
 class CheckResult:
     approved: bool
@@ -134,9 +128,7 @@ class CheckResult:
         return {"alta": "#0A7B3E", "média": "#C08A00", "baixa": "#B00020"}[self.trust_label]
 
 
-# ---------------------------------------------------------------------------
 # Nível 1 — verificação de escopo (local, sem LLM)
-# ---------------------------------------------------------------------------
 
 def _check_scope(
     content: str,
@@ -161,9 +153,7 @@ def _check_scope(
     return len(violations) == 0, violations
 
 
-# ---------------------------------------------------------------------------
 # Nível 2 — rastreabilidade via LLM (mais lento, mais preciso)
-# ---------------------------------------------------------------------------
 
 def _check_traceability(
     content: str,
@@ -234,9 +224,7 @@ Score 0.0 = conteúdo totalmente inadequado para o ano."""),
     return 0.75, []
 
 
-# ---------------------------------------------------------------------------
-# Função principal
-# ---------------------------------------------------------------------------
+
 
 def check_content(
     content: str,

@@ -70,11 +70,9 @@ def get_settings() -> Settings:
     return Settings()
 
 
-# ---------------------------------------------------------------------------
 # ChatReplicate — wrapper ChatModel sobre o cliente nativo do Replicate.
 # Definido no nível de módulo para evitar NameError ao usar variáveis de
 # closure como defaults de atributos de classe (proibido no Python 3.14+).
-# ---------------------------------------------------------------------------
 
 class _ChatReplicate(BaseChatModel):
     """ChatModel mínimo que delega ao cliente nativo do Replicate."""

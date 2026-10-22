@@ -83,16 +83,12 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Mapeamento de escopo curricular por série — guia o LLM a respeitar
 # a progressão vertical mesmo sem ter o livro didático no corpus.
 # Baseado na BNCC e na sequência tradicional dos PCN.
-# ---------------------------------------------------------------------------
 
 CURRICULUM_SCOPE: dict[str, dict[str, str]] = {
-    # =========================================================================
     # MATEMÁTICA
-    # =========================================================================
     "Matemática": {
         # ── Anos Iniciais ──────────────────────────────────────────────────
         "1º ano do Ensino Fundamental": (
@@ -223,10 +219,8 @@ CURRICULUM_SCOPE: dict[str, dict[str, str]] = {
             "revisão geral de geometria analítica e trigonometria."
         ),
     },
-    # =========================================================================
     # CIÊNCIAS (Ensino Fundamental — a disciplina se divide em Biologia,
     # Física e Química no Ensino Médio)
-    # =========================================================================
     "Ciências": {
         # ── Anos Iniciais ──────────────────────────────────────────────────
         "1º ano do Ensino Fundamental": (
@@ -310,9 +304,7 @@ CURRICULUM_SCOPE: dict[str, dict[str, str]] = {
             "universo: galáxias, estrelas, sistema solar, origem do universo (Big Bang) (EF09CI14)."
         ),
     },
-    # =========================================================================
     # LÍNGUA PORTUGUESA
-    # =========================================================================
     "Língua Portuguesa": {
         # ── Anos Iniciais ──────────────────────────────────────────────────
         "1º ano do Ensino Fundamental": (
@@ -418,9 +410,7 @@ CURRICULUM_SCOPE: dict[str, dict[str, str]] = {
             "gramática: revisão geral de sintaxe e análise de textos literários e não literários."
         ),
     },
-    # =========================================================================
     # HISTÓRIA
-    # =========================================================================
     "História": {
         # ── Anos Iniciais ──────────────────────────────────────────────────
         "1º ano do Ensino Fundamental": (
@@ -516,9 +506,7 @@ CURRICULUM_SCOPE: dict[str, dict[str, str]] = {
             "movimentos sociais, tecnologia e sociedade; revisão geral para ENEM/vestibulares."
         ),
     },
-    # =========================================================================
     # GEOGRAFIA
-    # =========================================================================
     "Geografia": {
         # ── Anos Iniciais ──────────────────────────────────────────────────
         "1º ano do Ensino Fundamental": (
@@ -618,9 +606,7 @@ _DEFAULT_SCOPE = (
     "Não antecipe conteúdos de anos superiores."
 )
 
-# ---------------------------------------------------------------------------
 # Prompt principal
-# ---------------------------------------------------------------------------
 
 CONTENT_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """Você é um professor especialista em didática do Ensino Básico brasileiro,

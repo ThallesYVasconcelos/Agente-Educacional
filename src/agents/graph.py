@@ -33,10 +33,6 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Estado do grafo
-# ---------------------------------------------------------------------------
-
 class AgentState(TypedDict):
     question: str
     route: str                    # "qa" | "automation" | "refuse"
@@ -47,10 +43,6 @@ class AgentState(TypedDict):
     sources: List[dict]
     safety_note: str
 
-
-# ---------------------------------------------------------------------------
-# Prompts
-# ---------------------------------------------------------------------------
 
 SUPERVISOR_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """Você é o supervisor de um assistente pedagógico para professores da Educação Básica brasileira,
@@ -127,10 +119,6 @@ OUT_OF_SCOPE_MESSAGE = (
 )
 
 
-# ---------------------------------------------------------------------------
-# Nós do grafo
-# ---------------------------------------------------------------------------
-
 def node_supervisor(state: AgentState) -> AgentState:
     """Analisa a intent e define a rota."""
     llm = get_llm(temperature=0)
@@ -160,7 +148,6 @@ def node_retriever(state: AgentState) -> AgentState:
 
 
 def node_safety(state: AgentState) -> AgentState:
-    """Adiciona nota de segurança pedagógica se necessário."""
     note = ""
     q = state["question"].lower()
     if any(w in q for w in ["saúde", "medicamento", "remédio", "doença", "psicológico"]):
@@ -221,10 +208,6 @@ def node_out_of_scope(state: AgentState) -> AgentState:
     return {**state, "answer": OUT_OF_SCOPE_MESSAGE}
 
 
-# ---------------------------------------------------------------------------
-# Roteadores condicionais
-# ---------------------------------------------------------------------------
-
 def route_after_supervisor(state: AgentState) -> str:
     if state["route"] == "refuse":
         return "out_of_scope"
@@ -242,10 +225,6 @@ def route_after_self_check(state: AgentState) -> str:
         return "retriever"
     return "refuse"
 
-
-# ---------------------------------------------------------------------------
-# Construção do grafo
-# ---------------------------------------------------------------------------
 
 def build_graph() -> StateGraph:
     graph = StateGraph(AgentState)

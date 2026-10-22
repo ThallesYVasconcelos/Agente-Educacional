@@ -15,9 +15,6 @@ def make_doc(content: str) -> Document:
     return Document(page_content=content, metadata={"source": "BNCC", "page": 10})
 
 
-# ---------------------------------------------------------------------------
-# A1 — Gerador de Plano de Aula
-# ---------------------------------------------------------------------------
 
 MOCK_LESSON_PLAN = """## Objetivos
 Desenvolver habilidades de leitura e interpretação.
@@ -77,9 +74,6 @@ def test_lesson_plan_has_elapsed_time(mock_search, mock_llm):
     assert result["elapsed_seconds"] >= 0
 
 
-# ---------------------------------------------------------------------------
-# A2 — Verificador de Habilidades BNCC
-# ---------------------------------------------------------------------------
 
 MOCK_BNCC_RESULT = {
     "habilidades": [

@@ -28,7 +28,6 @@ def get_embeddings():
             openai_api_key=settings.openai_api_key,
         )
 
-    # padrão: huggingface
     from langchain_huggingface import HuggingFaceEmbeddings
     return HuggingFaceEmbeddings(
         model_name=settings.embedding_model,

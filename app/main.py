@@ -17,7 +17,6 @@ import streamlit as st
 
 CUSTOM_CSS = """
 <style>
-    /* ----------- Reset suave e tipografia ----------- */
     .main .block-container {
         padding-top: 2rem;
         padding-bottom: 4rem;
@@ -29,7 +28,6 @@ CUSTOM_CSS = """
         letter-spacing: -0.02em;
     }
 
-    /* ----------- Hero ----------- */
     .edurag-hero {
         background: linear-gradient(135deg, #2E5BFF 0%, #6B4EFF 50%, #B23CFF 100%);
         color: #ffffff;
@@ -80,7 +78,6 @@ CUSTOM_CSS = """
         position: relative;
     }
 
-    /* ----------- Cards de feature ----------- */
     .feature-card {
         background: #ffffff;
         border: 1px solid #E6EAF5;
@@ -113,7 +110,6 @@ CUSTOM_CSS = """
         margin: 0;
     }
 
-    /* ----------- Sessão "O que sei" ----------- */
     .docs-section {
         background: #ffffff;
         border: 1px solid #E6EAF5;
@@ -151,7 +147,6 @@ CUSTOM_CSS = """
         line-height: 1.4;
     }
 
-    /* ----------- Estatísticas ----------- */
     .stat-row {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -184,7 +179,6 @@ CUSTOM_CSS = """
         font-weight: 500;
     }
 
-    /* ----------- Botões e inputs ----------- */
     .stButton button {
         border-radius: 10px;
         font-weight: 600;
@@ -200,7 +194,6 @@ CUSTOM_CSS = """
         box-shadow: 0 6px 20px rgba(46, 91, 255, 0.45);
     }
 
-    /* ----------- Chat ----------- */
     [data-testid="stChatMessage"] {
         background: #ffffff;
         border: 1px solid #E6EAF5;
@@ -209,13 +202,11 @@ CUSTOM_CSS = """
         margin-bottom: 0.8rem;
     }
 
-    /* ----------- Sidebar ----------- */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #FAFBFF 0%, #F0F3FF 100%);
         border-right: 1px solid #E6EAF5;
     }
 
-    /* ----------- Footer minimalista ----------- */
     .edurag-footer {
         margin-top: 3rem;
         padding-top: 1.5rem;
@@ -241,7 +232,6 @@ def home():
 
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-    # Hero
     st.markdown(
         """
         <div class="edurag-hero">
@@ -257,7 +247,7 @@ def home():
         unsafe_allow_html=True,
     )
 
-    # Estatísticas
+
     st.markdown(
         """
         <div class="stat-row">
@@ -278,9 +268,6 @@ def home():
         unsafe_allow_html=True,
     )
 
-    # -----------------------------------------------------------------------
-    # Seção explicativa: o que são BNCC e PCN
-    # -----------------------------------------------------------------------
     st.markdown(
         """
         <div style="margin: 1.5rem 0 0.5rem 0;">
@@ -461,7 +448,6 @@ def home():
             unsafe_allow_html=True,
         )
 
-    # Seção de documentos
     st.markdown(
         """
         <div class="docs-section">
@@ -509,7 +495,6 @@ def home():
         unsafe_allow_html=True,
     )
 
-    # Footer
     st.markdown(
         """
         <div class="edurag-footer">

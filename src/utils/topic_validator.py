@@ -13,11 +13,9 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-# ---------------------------------------------------------------------------
 # A) Mapa de palavras-chave por disciplina
 # Chave: nome da disciplina (igual ao selectbox)
 # Valor: termos que PERTENCEM a essa disciplina
-# ---------------------------------------------------------------------------
 
 _KEYWORDS: dict[str, list[str]] = {
     "Ciências": [
@@ -143,9 +141,7 @@ def _normalize(text: str) -> str:
     return text.lower().strip()
 
 
-# ---------------------------------------------------------------------------
 # A) Verificação rápida por palavras-chave
-# ---------------------------------------------------------------------------
 
 def check_topic_discipline(topic: str, disciplina: str) -> dict:
     """
@@ -161,7 +157,6 @@ def check_topic_discipline(topic: str, disciplina: str) -> dict:
     """
     topic_norm = _normalize(topic)
 
-    # Conta hits por disciplina
     hits: dict[str, int] = {}
     for disc, keywords in _KEYWORDS.items():
         count = sum(1 for kw in keywords if kw in topic_norm)
@@ -169,7 +164,6 @@ def check_topic_discipline(topic: str, disciplina: str) -> dict:
             hits[disc] = count
 
     if not hits:
-        # Nenhuma palavra-chave reconhecida — não temos como avaliar
         return {
             "ok": True,
             "detected": None,
@@ -188,7 +182,6 @@ def check_topic_discipline(topic: str, disciplina: str) -> dict:
             "message": "",
         }
 
-    # Inconsistência detectada
     return {
         "ok": False,
         "detected": best_disc,
@@ -200,9 +193,7 @@ def check_topic_discipline(topic: str, disciplina: str) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
 # B) Detecção automática via LLM
-# ---------------------------------------------------------------------------
 
 def detect_discipline_with_llm(topic: str, ano: str) -> dict:
     """

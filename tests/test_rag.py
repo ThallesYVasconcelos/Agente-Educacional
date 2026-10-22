@@ -10,10 +10,6 @@ from langchain_core.documents import Document
 from ingest.chunkers import chunk_documents
 
 
-# ---------------------------------------------------------------------------
-# Chunker
-# ---------------------------------------------------------------------------
-
 def make_doc(content: str, source: str = "bncc") -> Document:
     return Document(page_content=content, metadata={"source": source, "domain": "educacao"})
 

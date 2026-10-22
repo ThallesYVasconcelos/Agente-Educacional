@@ -46,10 +46,6 @@ app.add_middleware(
 )
 
 
-# ---------------------------------------------------------------------------
-# Schemas de request
-# ---------------------------------------------------------------------------
-
 class SearchDocsRequest(BaseModel):
     query: str = Field(..., max_length=2000)
     top_k: int = Field(default=5, ge=1, le=20)
@@ -68,10 +64,6 @@ class BnccCheckRequest(BaseModel):
     ano_escolar: str = Field(..., max_length=50)
 
 
-# ---------------------------------------------------------------------------
-# Middleware de audit log
-# ---------------------------------------------------------------------------
-
 @app.middleware("http")
 async def audit_log(request: Request, call_next):
     start = time.time()
@@ -87,10 +79,6 @@ async def audit_log(request: Request, call_next):
     )
     return response
 
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 
 @app.get("/health")
 def health():

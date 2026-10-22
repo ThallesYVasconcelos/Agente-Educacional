@@ -26,10 +26,8 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Utilitários de texto (espelhados de content_generator para evitar
 # importação de símbolos privados que causam ImportError no deploy)
-# ---------------------------------------------------------------------------
 
 def _strip_code_fences(text: str) -> str:
     """Remove blocos ```markdown``` ou ``` que LLMs às vezes inserem no output."""
@@ -64,9 +62,7 @@ def _fix_latex(text: str) -> str:
     return text
 
 
-# ---------------------------------------------------------------------------
 # Escopo curricular (importado do módulo público)
-# ---------------------------------------------------------------------------
 
 from src.automations.content_generator import CURRICULUM_SCOPE  # noqa: E402
 
@@ -76,9 +72,7 @@ _DEFAULT_SCOPE = (
     "Não antecipe conteúdos de anos superiores."
 )
 
-# ---------------------------------------------------------------------------
 # Classificação de disciplinas por natureza pedagógica
-# ---------------------------------------------------------------------------
 
 # Disciplinas onde cálculo numérico é o objeto central das questões
 _DISCIPLINAS_EXATAS = {
@@ -166,10 +160,6 @@ def _get_scope(componente: str, ano: str) -> str:
         scope = _SCOPE_DEFAULTS.get(componente, _DEFAULT_SCOPE)
     return scope
 
-
-# ---------------------------------------------------------------------------
-# Tipos de atividade disponíveis
-# ---------------------------------------------------------------------------
 
 ACTIVITY_TYPES = {
     "exercicios": "Exercícios objetivos (cálculo, resposta direta)",
@@ -278,10 +268,6 @@ def _build_validacao_enunciado_instructions(tipo: str, natureza: str) -> str:
     return ""
 
 
-# ---------------------------------------------------------------------------
-# Prompt de Geração
-# ---------------------------------------------------------------------------
-
 _GENERATION_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """\
 Você é professor especialista em Educação Básica brasileira.
@@ -315,10 +301,6 @@ GERE o JSON com {quantidade} questões EXCLUSIVAMENTE sobre "{topico}" em "{comp
 """),
 ])
 
-# ---------------------------------------------------------------------------
-# Prompt de Validação (segundo passo)
-# ---------------------------------------------------------------------------
-
 _VALIDATION_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """\
 Você é especialista em Educação Básica. Valide cada questão do JSON recebido.
@@ -344,10 +326,6 @@ Retorne o JSON COMPLETO com todas as questões (corrigidas ou não), sem markdow
     ("human", "JSON a validar:\n{atividades_json}"),
 ])
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _parse_json_safely(text: str) -> Optional[dict]:
     """Tenta extrair e parsear JSON do output do LLM."""
@@ -441,10 +419,6 @@ def _format_teacher_version(data: dict) -> str:
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
-# Função principal
-# ---------------------------------------------------------------------------
-
 def generate_activities(
     topico: str,
     componente: str,
@@ -467,7 +441,6 @@ def generate_activities(
     """
     start = time.time()
 
-    # ── Escopo e classificação de disciplina ──────────────────────────────
     escopo = _get_scope(componente, ano_escolar)
     natureza = _classify_discipline(componente)
 
@@ -487,7 +460,7 @@ def generate_activities(
         lembrete = f"Gere {quantidade} questões com cálculo explícito de '{topico}'."
     else:
         natureza_label = "CONCEITUAL — perguntas sobre conceitos, análise e raciocínio da disciplina (SEM cálculo numérico)"
-        # Remapear tipo para evitar indução de cálculos numéricos
+
         tipo_descricao = _ACTIVITY_TYPES_CONCEITUAL.get(tipo, _ACTIVITY_TYPES_CONCEITUAL["misto"])
         instrucoes_por_natureza = (
             f"❌ PROIBIDO ABSOLUTO: cálculo numérico de qualquer tipo (porcentagem, subtração, razão,\n"
@@ -518,7 +491,6 @@ def generate_activities(
     instrucoes_enunciado = _build_enunciado_instructions(tipo, natureza)
     instrucoes_validacao_enunciado = _build_validacao_enunciado_instructions(tipo, natureza)
 
-    # ── Busca trechos de documentos curriculares relevantes ───────────────
     query_hab = f"habilidades BNCC {componente} {topico} {ano_escolar}"
     query_ped = f"{topico} {componente} {ano_escolar} atividades"
     docs_hab = similarity_search(query_hab, k=4)
@@ -552,7 +524,6 @@ def generate_activities(
 
     from src.utils.curriculum_checker import check_content
 
-    # ── Passo 1: Geração com retry por violação de escopo ─────────────────
     logger.info("activity_generation_start", topico=topico, componente=componente, ano=ano_escolar)
 
     data = None
@@ -582,7 +553,6 @@ def generate_activities(
         if not data or not data.get("questoes"):
             continue  # tenta de novo
 
-        # Verifica escopo (nível 1, rápido) nas questões geradas
         questoes_text = " ".join(
             q.get("enunciado", "") + " " + q.get("resposta_correta", "")
             for q in data.get("questoes", [])
@@ -623,7 +593,6 @@ def generate_activities(
             "sources": [],
         }
 
-    # ── Passo 2: Validação de respostas ───────────────────────────────────
     logger.info("activity_validation_start", questoes=len(data.get("questoes", [])))
     val_llm = get_llm(temperature=0.1)
     val_chain = _VALIDATION_PROMPT | val_llm

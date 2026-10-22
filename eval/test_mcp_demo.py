@@ -13,7 +13,6 @@ BASE = "http://localhost:8000"
 def main():
     print("=== Teste MCP EduRAG ===\n")
 
-    # 1. Health
     try:
         r = httpx.get(f"{BASE}/health", timeout=5)
         data = r.json()
@@ -23,7 +22,6 @@ def main():
         print("   Servidor rodando? Execute: python src/mcp/server.py")
         return
 
-    # 2. List tools
     try:
         r = httpx.get(f"{BASE}/tools", timeout=5)
         tools = r.json()["tools"]
@@ -34,7 +32,6 @@ def main():
         print(f"2. Tools: ERRO — {e}")
         return
 
-    # 3. Get info
     try:
         r = httpx.get(f"{BASE}/tools/get_info", timeout=5)
         info = r.json()
